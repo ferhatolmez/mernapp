@@ -58,7 +58,13 @@ exports.register = asyncHandler(async (req, res) => {
   // Email gönderimini arka plana al
   sendVerificationEmail(user.email, verificationToken)
     .then(() => logger.info(`Email doğrulama maili gönderildi: ${user.email}`))
-    .catch((err) => logger.error('Email gönderme hatası:', err));
+    .catch((err) => {
+      logger.error('Email gönderme hatası:', {
+        email: user.email,
+        error: err.message,
+        stack: err.stack
+      });
+    });
 
   // Hoşgeldin bildirimini arka plana al
   Notification.create({

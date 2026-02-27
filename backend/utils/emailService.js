@@ -38,8 +38,13 @@ const createTransporter = async () => {
 const sendEmail = async ({ to, subject, html }) => {
   try {
     const transport = await createTransporter();
+
+    const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || '"MERN App" <noreply@mernapp.com>';
+
+    logger.debug(`📧 Email gönderiliyor: ${to} | Konu: ${subject}`);
+
     const info = await transport.sendMail({
-      from: process.env.EMAIL_FROM || '"MERN App" <noreply@mernapp.com>',
+      from: fromAddress,
       to,
       subject,
       html,
