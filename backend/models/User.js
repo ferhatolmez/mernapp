@@ -133,6 +133,13 @@ userSchema.methods.generatePasswordResetToken = function () {
 // ─── Hassas alanları JSON'dan çıkar ───────────────────────────────
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
+
+  // Avatar URL'ini mutlak hale getir (Eğer başında http yoksa ve BACKEND_URL tanımlıysa)
+  if (obj.avatar && !obj.avatar.startsWith('http')) {
+    const baseUrl = process.env.BACKEND_URL || '';
+    obj.avatar = `${baseUrl}${obj.avatar}`;
+  }
+
   delete obj.password;
   delete obj.__v;
   delete obj.emailVerificationToken;

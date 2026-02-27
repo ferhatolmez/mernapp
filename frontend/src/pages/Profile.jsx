@@ -150,7 +150,7 @@ const Profile = () => {
     }
   };
 
-  const avatarSrc = avatarPreview || (user?.avatar?.startsWith('/') ? `${API_URL}${user.avatar}` : user?.avatar);
+  const avatarSrc = avatarPreview || user?.avatar;
 
   return (
     <div className="page">

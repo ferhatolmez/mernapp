@@ -21,6 +21,18 @@ exports.getMessages = asyncHandler(async (req, res) => {
     .populate('sender', 'name avatar role')
     .lean();
 
+  const baseUrl = process.env.BACKEND_URL || '';
+
+  // URL'leri mutlak hale getir
+  messages.forEach(msg => {
+    if (msg.sender && msg.sender.avatar && !msg.sender.avatar.startsWith('http')) {
+      msg.sender.avatar = `${baseUrl}${msg.sender.avatar}`;
+    }
+    if (msg.fileUrl && !msg.fileUrl.startsWith('http')) {
+      msg.fileUrl = `${baseUrl}${msg.fileUrl}`;
+    }
+  });
+
   messages.reverse();
 
   res.json({
@@ -162,12 +174,13 @@ exports.uploadFile = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Dosya seçilmedi' });
   }
 
+  const baseUrl = process.env.BACKEND_URL || '';
   const fileUrl = `/uploads/chat/${req.file.filename}`;
 
   res.json({
     success: true,
     data: {
-      fileUrl,
+      fileUrl: `${baseUrl}${fileUrl}`,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       fileType: req.file.mimetype,

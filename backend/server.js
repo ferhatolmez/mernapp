@@ -155,10 +155,14 @@ io.on('connection', (socket) => {
   logger.info(`🟢 Kullanıcı bağlandı: ${user.name} (${socket.id})`);
 
   // Online kullanıcı listesine ekle
+  const avatarUrl = (user.avatar && !user.avatar.startsWith('http'))
+    ? `${process.env.BACKEND_URL || ''}${user.avatar}`
+    : user.avatar;
+
   onlineUsers.set(user._id.toString(), {
     socketId: socket.id,
     name: user.name,
-    avatar: user.avatar,
+    avatar: avatarUrl,
     role: user.role,
   });
 
@@ -200,7 +204,7 @@ io.on('connection', (socket) => {
         sender: {
           _id: user._id,
           name: user.name,
-          avatar: user.avatar,
+          avatar: avatarUrl,
           role: user.role,
         },
         room,

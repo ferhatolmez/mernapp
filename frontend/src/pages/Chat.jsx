@@ -445,10 +445,19 @@ const Chat = () => {
 
                     {/* Dosya/resim önizleme */}
                     {msg.type === 'image' && msg.fileUrl && !msg.isDeleted && (
-                      <img src={`${SOCKET_URL}${msg.fileUrl}`} alt={msg.fileName} className="message-image" />
+                      <img
+                        src={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${SOCKET_URL}${msg.fileUrl}`}
+                        alt={msg.fileName}
+                        className="message-image"
+                      />
                     )}
                     {msg.type === 'file' && msg.fileUrl && !msg.isDeleted && (
-                      <a href={`${SOCKET_URL}${msg.fileUrl}`} target="_blank" rel="noopener noreferrer" className="message-file">
+                      <a
+                        href={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${SOCKET_URL}${msg.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="message-file"
+                      >
                         📎 {msg.fileName}
                       </a>
                     )}
