@@ -46,27 +46,27 @@ exports.register = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await User.create({ name, email, password });
+  // Kullanıcıyı oluştur (henüz kaydetme)
+  const user = new User({ name, email, password });
 
-  // Email doğrulama token'ı üret ve mail gönder
+  // Email doğrulama token'ı üret
   const verificationToken = user.generateEmailVerificationToken();
-  await user.save({ validateBeforeSave: false });
 
-  try {
-    await sendVerificationEmail(user.email, verificationToken);
-    logger.info(`Email doğrulama maili gönderildi: ${user.email}`);
-  } catch (err) {
-    logger.error('Email gönderme hatası:', err);
-    // Email gönderilemese bile kayıt tamamlansın
-  }
+  // Tek seferde veritabanına kaydet (Hashing pre-save hook'ta yapılıyor)
+  await user.save();
 
-  // Hoşgeldin bildirimi
-  await Notification.create({
+  // Email gönderimini arka plana al
+  sendVerificationEmail(user.email, verificationToken)
+    .then(() => logger.info(`Email doğrulama maili gönderildi: ${user.email}`))
+    .catch((err) => logger.error('Email gönderme hatası:', err));
+
+  // Hoşgeldin bildirimini arka plana al
+  Notification.create({
     userId: user._id,
     type: 'welcome',
     title: 'Hoş Geldiniz! 🎉',
     message: `Merhaba ${user.name}, MERN App ailesine kayıt oldunuz. Lütfen email adresinizi doğrulayın.`,
-  });
+  }).catch((err) => logger.error('Bildirim oluşturma hatası:', err));
 
   res.status(201).json({
     success: true,
@@ -229,19 +229,14 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.generatePasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  try {
-    await sendPasswordResetEmail(user.email, resetToken);
-    logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`);
-  } catch (err) {
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save({ validateBeforeSave: false });
-    logger.error('Email gönderme hatası:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Email gönderilemedi, lütfen tekrar deneyin',
+  // Email gönderimini arka plana al
+  sendPasswordResetEmail(user.email, resetToken)
+    .then(() => logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`))
+    .catch(async (err) => {
+      logger.error('Email gönderme hatası:', err);
+      // Not: Artık asenkron olduğu için kullanıcıya hata dönmek mümkün değil, 
+      // ancak email servisinin başarısız olduğu durumlarda loglara bakılmalı.
     });
-  }
 
   res.json({
     success: true,

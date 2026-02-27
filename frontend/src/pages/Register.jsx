@@ -54,15 +54,18 @@ const Register = () => {
       return;
     }
 
-    setIsSubmitting(true);
-    const result = await register(formData.name, formData.email, formData.password);
-    if (!result.success) {
-      setErrors({ general: result.message });
-    } else {
-      toast.success(result.message || 'Kayıt başarılı. Lütfen email adresinizi doğrulayın.');
-      navigate('/login');
+    try {
+      setIsSubmitting(true);
+      const result = await register(formData.name, formData.email, formData.password);
+      if (!result.success) {
+        setErrors({ general: result.message });
+      } else {
+        toast.success(result.message || 'Kayıt başarılı. Lütfen email adresinizi doğrulayın.');
+        navigate('/login');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   // Şifre gücü göstergesi
@@ -178,7 +181,8 @@ const Register = () => {
           >
             {isSubmitting ? (
               <span className="btn-loading">
-                <span className="spinner-sm" /> Kayıt oluşturuluyor...
+                <span className="spinner-sm" />
+                <span>İşleminiz Yapılıyor...</span>
               </span>
             ) : (
               'Kayıt Ol'

@@ -112,7 +112,14 @@ const Login = () => {
           )}
 
           <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting}>
-            {isSubmitting ? <span className="btn-loading"><span className="spinner-sm" /> Giriş yapılıyor...</span> : requires2FA ? 'Doğrula' : 'Giriş Yap'}
+            {isSubmitting ? (
+              <span className="btn-loading">
+                <span className="spinner-sm" />
+                <span>{requires2FA ? 'Doğrulanıyor...' : 'Giriş Yapılıyor...'}</span>
+              </span>
+            ) : (
+              requires2FA ? 'Doğrula' : 'Giriş Yap'
+            )}
           </button>
         </form>
 
