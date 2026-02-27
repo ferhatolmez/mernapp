@@ -19,16 +19,7 @@ const protect = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 const cacheMiddleware = require('../middleware/cache');
 
-// ─── Multer konfigürasyonu (Avatar upload) ──────────────────────
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', 'uploads', 'avatars'));
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar-${req.user._id}-${Date.now()}${ext}`);
-  },
-});
+const { avatarStorage } = require('../config/cloudinary');
 
 const avatarUpload = multer({
   storage: avatarStorage,

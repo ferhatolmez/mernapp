@@ -174,13 +174,12 @@ exports.uploadFile = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Dosya seçilmedi' });
   }
 
-  const baseUrl = process.env.BACKEND_URL || '';
-  const fileUrl = `/uploads/chat/${req.file.filename}`;
+  const fileUrl = req.file.path;
 
   res.json({
     success: true,
     data: {
-      fileUrl: `${baseUrl}${fileUrl}`,
+      fileUrl,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       fileType: req.file.mimetype,

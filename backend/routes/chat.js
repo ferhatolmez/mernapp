@@ -13,16 +13,7 @@ const {
 const protect = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 
-// ─── Multer konfigürasyonu (Chat dosya upload) ──────────────────
-const chatStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', 'uploads', 'chat'));
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `chat-${req.user._id}-${Date.now()}${ext}`);
-    },
-});
+const { chatStorage } = require('../config/cloudinary');
 
 const chatUpload = multer({
     storage: chatStorage,
