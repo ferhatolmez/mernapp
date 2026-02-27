@@ -55,16 +55,10 @@ exports.register = asyncHandler(async (req, res) => {
   // Tek seferde veritabanına kaydet (Hashing pre-save hook'ta yapılıyor)
   await user.save();
 
-  // Email gönderimini arka plana al
-  sendVerificationEmail(user.email, verificationToken)
-    .then(() => logger.info(`Email doğrulama maili gönderildi: ${user.email}`))
-    .catch((err) => {
-      logger.error('Email gönderme hatası:', {
-        email: user.email,
-        error: err.message,
-        stack: err.stack
-      });
-    });
+  // Email doğrulama mailini Gönder (Beklemeli - Hata yakalamak için)
+  logger.info(`Email doğrulama maili gönderiliyor: ${user.email}`);
+  await sendVerificationEmail(user.email, verificationToken);
+  logger.info(`Email doğrulama maili başarıyla gönderildi: ${user.email}`);
 
   // Hoşgeldin bildirimini arka plana al
   Notification.create({
