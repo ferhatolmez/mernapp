@@ -1,0 +1,11 @@
+# backend klasöründe
+backend/.env
+backend/node_modules/
+
+# frontend klasöründe
+frontend/node_modules/
+frontend/build/
+
+# Genel
+.DS_Store
+*.log
