@@ -189,8 +189,8 @@ JWT_REFRESH_EXPIRES=7d
 # E-POSTA (Production için SMTP)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_USER=sizin_mailiniz@gmail.com
-EMAIL_PASS=uygulama_sifreniz
+EMAIL_USER=<kendi_mail_adresiniz_buraya>
+EMAIL_PASS=<gmail_uygulama_sifreniz_buraya>
 
 # REDIS (Opsiyonel)
 REDIS_URL=redis://localhost:6379
