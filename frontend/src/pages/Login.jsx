@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext';
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
 
   const { login, isAuthenticated } = useAuth();
   const toast = useToast();
@@ -28,8 +30,18 @@ const Login = () => {
       return;
     }
     setIsSubmitting(true);
-    const result = await login(formData.email, formData.password);
-    if (result.success) {
+
+    // 2FA destekli login
+    const result = await login(
+      formData.email,
+      formData.password,
+      requires2FA ? twoFactorCode : undefined
+    );
+
+    if (result.requiresTwoFactor) {
+      setRequires2FA(true);
+      toast.info('İki faktörlü doğrulama kodu gerekli');
+    } else if (result.success) {
       toast.success('Hoşgeldiniz! 👋');
     } else {
       toast.error(result.message);
@@ -56,30 +68,69 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="ornek@email.com" autoComplete="email" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Şifre</label>
-            <input id="password" type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" autoComplete="current-password" required />
-          </div>
+          {!requires2FA ? (
+            <>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input id="email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="ornek@email.com" autoComplete="email" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password">Şifre</label>
+                <input id="password" type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" autoComplete="current-password" required />
+              </div>
+              <div className="form-group" style={{ textAlign: 'right', marginTop: '-8px' }}>
+                <Link to="/forgot-password" className="auth-link" style={{ fontSize: '0.85rem' }}>
+                  Şifremi Unuttum
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="twoFactorCode">2FA Kodu</label>
+              <p className="text-muted text-sm" style={{ marginBottom: '8px' }}>
+                Google Authenticator uygulamanızdaki 6 haneli kodu girin
+              </p>
+              <input
+                id="twoFactorCode"
+                type="text"
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+                placeholder="000000"
+                maxLength={6}
+                autoFocus
+                style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5em' }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: '8px' }}
+                onClick={() => { setRequires2FA(false); setTwoFactorCode(''); }}
+              >
+                ← Geri dön
+              </button>
+            </div>
+          )}
+
           <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting}>
-            {isSubmitting ? <span className="btn-loading"><span className="spinner-sm" /> Giriş yapılıyor...</span> : 'Giriş Yap'}
+            {isSubmitting ? <span className="btn-loading"><span className="spinner-sm" /> Giriş yapılıyor...</span> : requires2FA ? 'Doğrula' : 'Giriş Yap'}
           </button>
         </form>
 
-        <div className="demo-accounts">
-          <p className="demo-title">Demo Hesaplar:</p>
-          <div className="demo-buttons">
-            <button onClick={() => fillDemo('admin')} className="btn btn-ghost btn-sm">👑 Admin</button>
-            <button onClick={() => fillDemo('user')} className="btn btn-ghost btn-sm">👤 Kullanıcı</button>
-          </div>
-        </div>
+        {!requires2FA && (
+          <>
+            <div className="demo-accounts">
+              <p className="demo-title">Demo Hesaplar:</p>
+              <div className="demo-buttons">
+                <button onClick={() => fillDemo('admin')} className="btn btn-ghost btn-sm">👑 Admin</button>
+                <button onClick={() => fillDemo('user')} className="btn btn-ghost btn-sm">👤 Kullanıcı</button>
+              </div>
+            </div>
 
-        <div className="auth-footer">
-          <p>Hesabınız yok mu? <Link to="/register" className="auth-link">Kayıt Olun</Link></p>
-        </div>
+            <div className="auth-footer">
+              <p>Hesabınız yok mu? <Link to="/register" className="auth-link">Kayıt Olun</Link></p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

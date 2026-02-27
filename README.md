@@ -1,216 +1,221 @@
-# ⚡ MERN Full Stack Application
+# ⚡ MERN Full Stack Application v2.0
 
-Kapsamlı bir MERN (MongoDB, Express, React, Node.js) uygulaması.
-
-## 🚀 Özellikler
-
-### Backend
-- ✅ JWT Access Token (15dk) + Refresh Token (7 gün) Authentication
-- ✅ bcrypt ile şifre hashleme (salt rounds: 12)
-- ✅ Role-Based Access Control (RBAC): user, moderator, admin
-- ✅ Global error handler middleware
-- ✅ Rate limiting (15dk/100 istek, login için 15dk/10 istek)
-- ✅ Helmet (HTTP güvenlik başlıkları)
-- ✅ CORS konfigürasyonu
-- ✅ NoSQL injection koruması (express-mongo-sanitize)
-- ✅ Socket.io ile gerçek zamanlı chat
-- ✅ Cursor-based pagination (chat) + Offset-based pagination (admin)
-- ✅ MongoDB aggregation pipeline (istatistikler)
-- ✅ Mongoose index'leri
-
-### Frontend
-- ✅ React 18 + Hooks (useState, useEffect, useContext, useMemo, useCallback, useRef, useReducer)
-- ✅ Context API ile global auth state yönetimi
-- ✅ Axios interceptors (otomatik token yenileme)
-- ✅ Protected Routes + Role-based Routes
-- ✅ Gerçek zamanlı chat (Socket.io)
-- ✅ Admin paneli (kullanıcı yönetimi, rol değiştirme, silme)
-- ✅ Pagination bileşeni
-- ✅ Şifre güçlük göstergesi
-- ✅ Yazıyor bildirimi
-- ✅ Online kullanıcı listesi
+Kapsamlı, modern ve güvenli bir MERN (MongoDB, Express, React, Node.js) full-stack uygulaması.
 
 ---
 
-## 📁 Proje Yapısı
+## 🚀 Özellikler
+
+### 🎨 Tasarım & UI
+- **Dark/Light tema toggle** — Kullanıcı tercihi localStorage'da saklanır
+- **Toast bildirimleri** — react-hot-toast ile modern bildirimler
+- **Loading skeleton** — Veri yüklenirken iskelet ekranlar
+- **Framer Motion animasyonları** — Sayfa geçişlerinde akıcı animasyonlar
+- **Responsive sidebar** — Mobilde hamburger menü
+- **Avatar upload** — Profil fotoğrafı yükleme
+
+### ⚙️ Kullanışlılık
+- **Email doğrulama** — Kayıtta email onay linki (Nodemailer + Ethereal dev)
+- **Şifremi unuttum** — Email ile şifre sıfırlama
+- **Bildirim sistemi** — In-app gerçek zamanlı bildirimler (Socket.io + API)
+- **Arama geçmişi** — Son 20 arama kaydedilir
+- **Çoklu chat odası** — general, random, tech + özel odalar
+- **Mesaj silme/düzenleme** — Chat mesajlarını yönet (soft delete)
+- **Dosya paylaşımı** — Chat'te resim ve dosya gönder (10MB'a kadar)
+- **2FA (İki Faktörlü Doğrulama)** — Google Authenticator desteği
+
+### 🛠️ Teknik
+- **Unit testler** — Jest + Supertest (backend)
+- **API rate limit göstergesi** — Frontend'de kalan istek sayısı
+- **Swagger API doku.** — `/api-docs` adresinden erişilebilir
+- **Redis cache** — Opsiyonel, ioredis ile cache middleware
+- **Docker** — docker-compose ile tam ortam (MongoDB + Redis + Backend + Frontend)
+- **CI/CD** — GitHub Actions workflow (test + build + Docker)
+- **Winston logging** — Gelişmiş loglama (dosya + konsol)
+- **TypeScript** — Kademeli geçiş (tsconfig + tip tanımları, yeni dosyalar TS'de)
+
+---
+
+## 🏗️ Proje Yapısı
 
 ```
 mern-app/
 ├── backend/
-│   ├── config/
-│   │   └── db.js              # MongoDB bağlantısı
-│   ├── controllers/
-│   │   ├── authController.js  # Register, Login, Refresh, Logout
-│   │   ├── userController.js  # CRUD + Pagination + Stats
-│   │   └── chatController.js  # Mesaj geçmişi
-│   ├── middleware/
-│   │   ├── auth.js            # JWT doğrulama
-│   │   ├── authorize.js       # Rol kontrolü
-│   │   └── errorHandler.js    # Global hata yönetimi
-│   ├── models/
-│   │   ├── User.js            # Kullanıcı şeması
-│   │   ├── RefreshToken.js    # Refresh token şeması
-│   │   └── Message.js         # Chat mesaj şeması
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── users.js
-│   │   └── chat.js
-│   ├── server.js              # Ana sunucu + Socket.io
-│   ├── .env.example
-│   └── package.json
-│
-└── frontend/
-    ├── public/
-    │   └── index.html
-    ├── src/
-    │   ├── context/
-    │   │   └── AuthContext.jsx    # Global auth state (useReducer)
-    │   ├── hooks/
-    │   │   └── usePagination.js   # Custom pagination hook
-    │   ├── components/
-    │   │   ├── Navbar.jsx
-    │   │   ├── Pagination.jsx     # Pagination bileşeni
-    │   │   └── PrivateRoute.jsx   # Korumalı route'lar
-    │   ├── pages/
-    │   │   ├── Login.jsx
-    │   │   ├── Register.jsx
-    │   │   ├── Dashboard.jsx      # Ana sayfa
-    │   │   ├── Chat.jsx           # Gerçek zamanlı chat
-    │   │   ├── AdminPanel.jsx     # Kullanıcı yönetimi
-    │   │   └── Profile.jsx        # Profil + şifre değiştir
-    │   ├── utils/
-    │   │   └── api.js             # Axios instance + interceptors
-    │   ├── App.jsx                # Router yapısı
-    │   ├── index.js
-    │   └── styles.css
-    └── package.json
+│   ├── config/         # DB, Redis, Swagger konfigürasyonları
+│   ├── controllers/    # Auth, Chat, User, Notification controller'ları
+│   ├── middleware/      # Auth, authorize, cache, errorHandler
+│   ├── models/          # User, Message, Notification, Room, RefreshToken
+│   ├── routes/          # API route tanımları (Swagger annotated)
+│   ├── utils/           # Logger, emailService
+│   ├── uploads/         # Avatar ve chat dosyaları
+│   ├── types/           # TypeScript tip tanımları
+│   ├── __tests__/       # Jest test dosyaları
+│   ├── Dockerfile
+│   └── server.js        # Ana sunucu dosyası
+├── frontend/
+│   ├── src/
+│   │   ├── components/  # Navbar, Sidebar, NotificationBell, Skeleton, PrivateRoute, RateLimitIndicator
+│   │   ├── context/     # AuthContext, ThemeContext, ToastContext, NotificationContext
+│   │   ├── pages/       # Login, Register, Dashboard, Chat, Profile, Admin, ForgotPassword, ResetPassword
+│   │   ├── utils/       # API (Axios + rate limit tracking)
+│   │   └── App.jsx
+│   ├── Dockerfile
+│   └── nginx.conf
+├── docker-compose.yml
+├── .github/workflows/ci-cd.yml
+└── README.md
 ```
 
 ---
 
-## ⚙️ Kurulum
+## 🔧 Kurulum
 
-### 1. Gereksinimler
-- Node.js v18+
-- MongoDB (local veya Atlas)
+### Gereksinimler
+- Node.js 18+
+- MongoDB (Atlas veya lokal)
+- Redis (opsiyonel)
 
-### 2. Backend Kurulumu
+### 1. Repoyu klonla
+```bash
+git clone https://github.com/<username>/mern-app.git
+cd mern-app
+```
 
+### 2. Backend kurulumu
 ```bash
 cd backend
-
-# Paketleri kur
 npm install
-
-# .env dosyasını oluştur
 cp .env.example .env
-# .env dosyasını düzenleyip kendi değerlerinizi girin
-
-# Geliştirme modunda başlat
+# .env dosyasını düzenleyin (MongoDB URI, JWT secrets)
 npm run dev
-
-# Production'da başlat
-npm start
 ```
 
-### 3. Frontend Kurulumu
-
+### 3. Frontend kurulumu
 ```bash
 cd frontend
-
-# Paketleri kur
 npm install
-
-# Geliştirme modunda başlat
 npm start
 ```
 
-### 4. .env Dosyası (backend/.env)
-
-```env
-PORT=5000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/mernapp
-JWT_ACCESS_SECRET=gizli_access_key_buraya
-JWT_REFRESH_SECRET=gizli_refresh_key_buraya
-JWT_ACCESS_EXPIRES=15m
-JWT_REFRESH_EXPIRES=7d
-CLIENT_URL=http://localhost:3000
-```
-
----
-
-## 🔌 API Endpoints
-
-### Auth
-| Method | Endpoint | Açıklama | Auth |
-|--------|----------|----------|------|
-| POST | /api/auth/register | Kayıt | ❌ |
-| POST | /api/auth/login | Giriş | ❌ |
-| POST | /api/auth/refresh | Token yenile | Cookie |
-| POST | /api/auth/logout | Çıkış | ❌ |
-| GET | /api/auth/me | Mevcut kullanıcı | ✅ |
-
-### Users
-| Method | Endpoint | Açıklama | Auth | Rol |
-|--------|----------|----------|------|-----|
-| GET | /api/users | Kullanıcı listesi | ✅ | admin/mod |
-| GET | /api/users/stats | İstatistikler | ✅ | admin |
-| GET | /api/users/:id | Tekil kullanıcı | ✅ | admin/mod |
-| PUT | /api/users/profile | Profil güncelle | ✅ | herkes |
-| PUT | /api/users/change-password | Şifre değiştir | ✅ | herkes |
-| PUT | /api/users/:id | Kullanıcı güncelle | ✅ | admin |
-| DELETE | /api/users/:id | Kullanıcı sil | ✅ | admin |
-
-### Chat
-| Method | Endpoint | Açıklama | Auth |
-|--------|----------|----------|------|
-| GET | /api/chat/messages | Mesaj geçmişi | ✅ |
-
-### Socket.io Events
-| Event | Yön | Açıklama |
-|-------|-----|----------|
-| joinRoom | Client→Server | Odaya katıl |
-| sendMessage | Client→Server | Mesaj gönder |
-| typing | Client→Server | Yazıyor bildirimi |
-| newMessage | Server→Client | Yeni mesaj |
-| onlineUsers | Server→Client | Online liste |
-| userTyping | Server→Client | Kim yazıyor |
-
----
-
-## 🔐 Güvenlik Özellikleri
-
-1. **bcrypt** — Şifreler salt=12 ile hashlenmiş
-2. **JWT** — Access (15dk) + Refresh (7 gün, HttpOnly cookie)
-3. **Helmet** — HTTP güvenlik başlıkları
-4. **Rate Limiting** — API ve auth limiteri
-5. **CORS** — Sadece izin verilen origin
-6. **NoSQL Injection** — express-mongo-sanitize
-7. **Input Validation** — Mongoose validators
-8. **HttpOnly Cookie** — XSS koruması için refresh token
-
----
-
-## 🌐 Production Deploy
-
-### Backend (Railway/Render/VPS)
+### 4. Docker ile çalıştırma (Opsiyonel)
 ```bash
-npm start
-# PM2 ile: pm2 start server.js --name mern-backend
+# Kök dizinde:
+docker-compose up -d
+# Frontend: http://localhost
+# Backend: http://localhost:5000
+# API Docs: http://localhost:5000/api-docs
 ```
 
-### Frontend (Vercel/Netlify)
+---
+
+## 🔑 Ortam Değişkenleri
+
+| Değişken | Açıklama | Varsayılan |
+|----------|----------|------------|
+| `PORT` | Sunucu portu | `5000` |
+| `NODE_ENV` | Ortam | `development` |
+| `MONGODB_URI` | MongoDB bağlantı URI'si | — |
+| `JWT_ACCESS_SECRET` | Access token secret | — |
+| `JWT_REFRESH_SECRET` | Refresh token secret | — |
+| `CLIENT_URL` | Frontend URL'si | `http://localhost:3000` |
+| `EMAIL_HOST` | SMTP host | Ethereal (dev) |
+| `EMAIL_PORT` | SMTP port | `587` |
+| `EMAIL_USER` | SMTP kullanıcı | Ethereal (dev) |
+| `EMAIL_PASS` | SMTP şifre | Ethereal (dev) |
+| `REDIS_URL` | Redis URL | `redis://localhost:6379` |
+
+---
+
+## 📡 API Endpoints
+
+### Auth (`/api/auth`)
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| POST | `/register` | Yeni kullanıcı kaydı |
+| POST | `/login` | Giriş (2FA destekli) |
+| POST | `/verify-email` | Email doğrulama |
+| POST | `/forgot-password` | Şifre sıfırlama maili |
+| POST | `/reset-password` | Şifre sıfırla |
+| POST | `/refresh` | Access token yenile |
+| POST | `/logout` | Çıkış |
+| GET | `/me` | Mevcut kullanıcı bilgileri |
+| POST | `/2fa/setup` | 2FA kurulumu |
+| POST | `/2fa/verify` | 2FA doğrulama |
+| POST | `/2fa/disable` | 2FA devre dışı |
+
+### Users (`/api/users`)
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| PUT | `/profile` | Profil güncelle |
+| PUT | `/change-password` | Şifre değiştir |
+| PUT | `/avatar` | Avatar yükle |
+| GET/POST/DELETE | `/search-history` | Arama geçmişi |
+| GET | `/stats` | İstatistikler (Admin) |
+| GET/PUT/DELETE | `/:id` | Kullanıcı CRUD (Admin) |
+
+### Chat (`/api/chat`)
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| GET | `/rooms` | Odaları listele |
+| POST | `/rooms` | Yeni oda (Admin/Mod) |
+| GET | `/messages` | Mesaj geçmişi (cursor pagination) |
+| PUT | `/messages/:id` | Mesaj düzenle |
+| DELETE | `/messages/:id` | Mesaj sil |
+| POST | `/upload` | Dosya yükle |
+
+### Notifications (`/api/notifications`)
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| GET | `/` | Bildirimleri getir |
+| GET | `/unread-count` | Okunmamış sayısı |
+| PUT | `/read-all` | Tümünü oku |
+| PUT | `/:id/read` | Bildirimi oku |
+| DELETE | `/:id` | Bildirim sil |
+
+> 📖 Tüm API dokümantasyonu: `http://localhost:5000/api-docs`
+
+---
+
+## 🔒 Güvenlik
+
+- JWT (Access + Refresh Token) ile kimlik doğrulama
+- HttpOnly cookie ile refresh token
+- bcryptjs ile şifre hashleme
+- Helmet HTTP güvenlik başlıkları
+- express-rate-limit ile API rate limiting
+- express-mongo-sanitize ile NoSQL injection koruması
+- xss-clean ile XSS koruması
+- CORS yapılandırması
+- İki faktörlü doğrulama (2FA)
+- Email doğrulama
+- Rol tabanlı erişim kontrolü (RBAC)
+
+---
+
+## 🧪 Testler
+
 ```bash
-npm run build
-# build/ klasörünü deploy et
+# Backend testleri
+cd backend
+npm test
 ```
 
-### Environment Variables (Production)
+---
+
+## 🐳 Docker
+
+```bash
+docker-compose up -d    # Başlat
+docker-compose down     # Durdur
+docker-compose logs -f  # Loglar
 ```
-NODE_ENV=production
-MONGODB_URI=mongodb+srv://...Atlas URI...
-JWT_ACCESS_SECRET=<en az 64 karakterlik random string>
-JWT_REFRESH_SECRET=<en az 64 karakterlik random string>
-CLIENT_URL=https://your-frontend.vercel.app
-```
+
+---
+
+## 📝 Lisans
+
+MIT License
+
+---
+
+**⚡ MERN App v2.0** — Geliştirici dostu, güvenli, modern full-stack uygulama.

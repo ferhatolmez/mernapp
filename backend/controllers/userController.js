@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { cache } = require('../config/redis');
 
 // ─── TÜM KULLANICILARI GETİR (Admin) ─────────────────────────────
 // GET /api/users?page=1&limit=10&search=ali&role=user&sort=-createdAt
@@ -13,9 +14,8 @@ exports.getUsers = asyncHandler(async (req, res) => {
   } = req.query;
 
   const pageNum = parseInt(page, 10);
-  const limitNum = Math.min(parseInt(limit, 10), 50); // Max 50
+  const limitNum = Math.min(parseInt(limit, 10), 50);
 
-  // ─── Filtre oluştur ─────────────────────────────────────────
   const filter = {};
 
   if (search) {
@@ -29,15 +29,13 @@ exports.getUsers = asyncHandler(async (req, res) => {
     filter.role = role;
   }
 
-  // ─── Toplam kayıt sayısı ─────────────────────────────────────
   const total = await User.countDocuments(filter);
 
-  // ─── Cursor-based alternatifi olan offset pagination ─────────
   const users = await User.find(filter)
     .sort(sort)
     .skip((pageNum - 1) * limitNum)
     .limit(limitNum)
-    .lean(); // Plain JS object döner — Mongoose overhead yok
+    .lean();
 
   res.json({
     success: true,
@@ -78,7 +76,6 @@ exports.getUser = asyncHandler(async (req, res) => {
 exports.updateUser = asyncHandler(async (req, res) => {
   const { name, email, role, isActive } = req.body;
 
-  // Şifre bu endpoint'ten güncellenmez
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { name, email, role, isActive },
@@ -102,7 +99,6 @@ exports.updateUser = asyncHandler(async (req, res) => {
 // ─── KULLANICI SİL (Admin) ────────────────────────────────────────
 // DELETE /api/users/:id
 exports.deleteUser = asyncHandler(async (req, res) => {
-  // Kendi hesabını silemesin
   if (req.params.id === req.user._id.toString()) {
     return res.status(400).json({
       success: false,
@@ -167,10 +163,70 @@ exports.changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+// ─── AVATAR YÜKLE ─────────────────────────────────────────────────
+// PUT /api/users/avatar
+exports.uploadAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Fotoğraf seçilmedi' });
+  }
+
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { avatar: avatarUrl },
+    { new: true }
+  );
+
+  res.json({
+    success: true,
+    message: 'Profil fotoğrafı güncellendi',
+    data: { user },
+  });
+});
+
+// ─── ARAMA GEÇMİŞİ KAYDET ────────────────────────────────────────
+// POST /api/users/search-history
+exports.saveSearchHistory = asyncHandler(async (req, res) => {
+  const { query } = req.body;
+
+  if (!query || query.trim().length === 0) {
+    return res.status(400).json({ success: false, message: 'Arama sorgusu zorunludur' });
+  }
+
+  const user = await User.findById(req.user._id);
+
+  // Aynı sorguyu tekrar ekleme
+  user.searchHistory = user.searchHistory.filter(h => h.query !== query.trim());
+
+  // Başa ekle, max 20 kayıt
+  user.searchHistory.unshift({ query: query.trim() });
+  if (user.searchHistory.length > 20) {
+    user.searchHistory = user.searchHistory.slice(0, 20);
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  res.json({ success: true, data: { searchHistory: user.searchHistory } });
+});
+
+// ─── ARAMA GEÇMİŞİNİ GETİR ──────────────────────────────────────
+// GET /api/users/search-history
+exports.getSearchHistory = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('searchHistory');
+  res.json({ success: true, data: { searchHistory: user.searchHistory || [] } });
+});
+
+// ─── ARAMA GEÇMİŞİNİ TEMİZLE ─────────────────────────────────────
+// DELETE /api/users/search-history
+exports.clearSearchHistory = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.user._id, { searchHistory: [] });
+  res.json({ success: true, message: 'Arama geçmişi temizlendi' });
+});
+
 // ─── İSTATİSTİKLER (Admin) ────────────────────────────────────────
 // GET /api/users/stats
 exports.getUserStats = asyncHandler(async (req, res) => {
-  // Aggregation pipeline örneği
   const stats = await User.aggregate([
     {
       $group: {

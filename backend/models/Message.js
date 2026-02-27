@@ -20,8 +20,37 @@ const messageSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['text', 'system'],
+      enum: ['text', 'system', 'file', 'image'],
       default: 'text',
+    },
+    // ─── Mesaj düzenleme ─────────────────────────────────────────
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
+    },
+    // ─── Mesaj silme (soft delete) ───────────────────────────────
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    // ─── Dosya paylaşımı ─────────────────────────────────────────
+    fileUrl: {
+      type: String,
+    },
+    fileName: {
+      type: String,
+    },
+    fileSize: {
+      type: Number,
+    },
+    fileType: {
+      type: String,
     },
   },
   {
@@ -31,5 +60,6 @@ const messageSchema = new mongoose.Schema(
 
 // Mesajları hızlı getirmek için index
 messageSchema.index({ room: 1, createdAt: -1 });
+messageSchema.index({ sender: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);

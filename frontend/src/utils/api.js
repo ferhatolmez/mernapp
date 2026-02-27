@@ -1,9 +1,14 @@
 import axios from 'axios';
 
+// ─── Rate limit state (global) ────────────────────────────────────
+let rateLimitInfo = { remaining: null, limit: null, reset: null };
+
+export const getRateLimitInfo = () => rateLimitInfo;
+
 // ─── Axios instance ───────────────────────────────────────────────
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  withCredentials: true, // Cookie'leri gönder/al
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,9 +26,9 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor — Token expire olunca yenile ───────────
+// ─── Response Interceptor — Token expire + Rate limit ────────────
 let isRefreshing = false;
-let failedQueue = []; // Token yenilenirken bekleyen istekler
+let failedQueue = [];
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
@@ -37,18 +42,29 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Rate limit bilgilerini güncelle
+    const remaining = response.headers['x-ratelimit-remaining'];
+    const limit = response.headers['x-ratelimit-limit'];
+    const reset = response.headers['x-ratelimit-reset'];
+    if (remaining !== undefined) {
+      rateLimitInfo = {
+        remaining: parseInt(remaining),
+        limit: parseInt(limit),
+        reset: reset ? new Date(parseInt(reset) * 1000) : null,
+      };
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
-    // Token expire olduysa ve bu zaten retry değilse
     if (
       error.response?.status === 401 &&
       error.response?.data?.code === 'TOKEN_EXPIRED' &&
       !originalRequest._retry
     ) {
       if (isRefreshing) {
-        // Token zaten yenileniyor — sıraya ekle
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then((token) => {
@@ -71,7 +87,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Refresh token da geçersiz → logout
         localStorage.removeItem('accessToken');
         window.location.href = '/login';
         return Promise.reject(refreshError);

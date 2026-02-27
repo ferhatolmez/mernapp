@@ -1,11 +1,36 @@
-# backend klasöründe
-backend/.env
-backend/node_modules/
+# Dependencies
+node_modules/
 
-# frontend klasöründe
-frontend/node_modules/
-frontend/build/
+# Build
+build/
+dist/
 
-# Genel
-.DS_Store
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
 *.log
+
+# Uploads
+backend/uploads/avatars/*
+backend/uploads/chat/*
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/chat/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml

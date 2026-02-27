@@ -1,43 +1,23 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 
-// ─── Context ──────────────────────────────────────────────────────
 const AuthContext = createContext(null);
 
-// ─── Reducer ──────────────────────────────────────────────────────
 const initialState = {
   user: null,
   isAuthenticated: false,
-  isLoading: true, // Başlangıçta token kontrolü yapılıyor
+  isLoading: true,
   error: null,
 };
 
 const authReducer = (state, action) => {
   switch (action.type) {
     case 'AUTH_SUCCESS':
-      return {
-        ...state,
-        user: action.payload.user,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      };
+      return { ...state, user: action.payload.user, isAuthenticated: true, isLoading: false, error: null };
     case 'AUTH_FAIL':
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: action.payload,
-      };
+      return { ...state, user: null, isAuthenticated: false, isLoading: false, error: action.payload };
     case 'LOGOUT':
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-      };
+      return { ...state, user: null, isAuthenticated: false, isLoading: false, error: null };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'UPDATE_USER':
@@ -49,11 +29,9 @@ const authReducer = (state, action) => {
   }
 };
 
-// ─── Provider ─────────────────────────────────────────────────────
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Uygulama açıldığında mevcut session kontrolü
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('accessToken');
@@ -64,10 +42,7 @@ export const AuthProvider = ({ children }) => {
 
       try {
         const response = await api.get('/auth/me');
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: { user: response.data.data.user },
-        });
+        dispatch({ type: 'AUTH_SUCCESS', payload: { user: response.data.data.user } });
       } catch (error) {
         localStorage.removeItem('accessToken');
         dispatch({ type: 'AUTH_FAIL', payload: null });
@@ -77,13 +52,11 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // ─── Kayıt ────────────────────────────────────────────────────
   const register = useCallback(async (name, email, password) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await api.post('/auth/register', { name, email, password });
       const { user, accessToken } = response.data.data;
-
       localStorage.setItem('accessToken', accessToken);
       dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
       return { success: true };
@@ -94,13 +67,18 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ─── Giriş ────────────────────────────────────────────────────
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, twoFactorCode) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { user, accessToken } = response.data.data;
+      const response = await api.post('/auth/login', { email, password, twoFactorCode });
 
+      // 2FA gerekiyorsa
+      if (response.data.requiresTwoFactor) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return { success: false, requiresTwoFactor: true };
+      }
+
+      const { user, accessToken } = response.data.data;
       localStorage.setItem('accessToken', accessToken);
       dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
       return { success: true };
@@ -111,7 +89,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ─── Çıkış ────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout');
@@ -121,7 +98,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ─── Kullanıcı bilgisini güncelle ─────────────────────────────
   const updateUser = useCallback((userData) => {
     dispatch({ type: 'UPDATE_USER', payload: userData });
   }, []);
@@ -130,7 +106,6 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
-  // Rol kontrolü yardımcıları
   const isAdmin = state.user?.role === 'admin';
   const isModerator = ['admin', 'moderator'].includes(state.user?.role);
 
@@ -148,7 +123,6 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// ─── Custom hook ──────────────────────────────────────────────────
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

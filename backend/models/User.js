@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const validator = require('validator');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
@@ -26,7 +27,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Şifre zorunludur'],
       minlength: [6, 'Şifre en az 6 karakter olmalıdır'],
-      select: false, // Sorgularda default olarak gelmesin
+      select: false,
     },
     role: {
       type: String,
@@ -36,7 +37,6 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: function () {
-        // İsmin baş harflerine göre renk ata
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(this.name)}&background=random`;
       },
     },
@@ -47,19 +47,57 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    // ─── Email doğrulama ───────────────────────────────────────────
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    // ─── Şifre sıfırlama ──────────────────────────────────────────
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    // ─── 2FA ───────────────────────────────────────────────────────
+    twoFactorSecret: {
+      type: String,
+      select: false,
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    // ─── Arama geçmişi ────────────────────────────────────────────
+    searchHistory: [
+      {
+        query: { type: String, trim: true },
+        searchedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
-    timestamps: true, // createdAt ve updatedAt otomatik eklenir
+    timestamps: true,
   }
 );
 
 // ─── INDEX'LER ────────────────────────────────────────────────────
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ isEmailVerified: 1 });
 
 // ─── MIDDLEWARE: Kaydetmeden önce şifreyi hashle ──────────────────
 userSchema.pre('save', async function (next) {
-  // Şifre değişmediyse atla
   if (!this.isModified('password')) return next();
 
   try {
@@ -76,11 +114,32 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// ─── METOD: Email doğrulama token'ı üret ──────────────────────────
+userSchema.methods.generateEmailVerificationToken = function () {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 saat
+  return token;
+};
+
+// ─── METOD: Şifre sıfırlama token'ı üret ─────────────────────────
+userSchema.methods.generatePasswordResetToken = function () {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 saat
+  return token;
+};
+
 // ─── Hassas alanları JSON'dan çıkar ───────────────────────────────
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   delete obj.__v;
+  delete obj.emailVerificationToken;
+  delete obj.emailVerificationExpires;
+  delete obj.passwordResetToken;
+  delete obj.passwordResetExpires;
+  delete obj.twoFactorSecret;
   return obj;
 };
 

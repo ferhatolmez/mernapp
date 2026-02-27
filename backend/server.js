@@ -10,13 +10,18 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const dotenv = require('dotenv');
+const path = require('path');
+const swaggerUi = require('swagger-ui-express');
 
 // ─── Environment variables ────────────────────────────────────────
 dotenv.config();
 
 const connectDB = require('./config/db');
+const { connectRedis } = require('./config/redis');
+const swaggerSpec = require('./config/swagger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { saveMessage } = require('./controllers/chatController');
+const logger = require('./utils/logger');
 
 // ─── Uygulama ve HTTP sunucusu ────────────────────────────────────
 const app = express();
@@ -28,36 +33,39 @@ const io = new Server(httpServer, {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     credentials: true,
   },
+  maxHttpBufferSize: 10 * 1024 * 1024, // 10MB (dosya paylaşımı için)
 });
 
 // ─── Veritabanı bağlantısı ────────────────────────────────────────
 connectDB();
 
-// ─── GÜVENLİK MİDDLEWARE'LERİ ───────────────────────────────────
+// ─── Redis bağlantısı ─────────────────────────────────────────────
+connectRedis();
 
-// HTTP başlıklarını güvenli yap
+// ─── GÜVENLİK MİDDLEWARE'LERİ ───────────────────────────────────
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// CORS konfigürasyonu
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true, // Cookie'lere izin ver
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
 }));
 
-// Rate limiting — DDoS ve brute force koruması
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 dakika
+  windowMs: 15 * 60 * 1000,
   max: 100,
   message: { success: false, message: 'Çok fazla istek gönderildi. 15 dakika sonra tekrar deneyin.' },
   standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api', limiter);
 
-// Auth endpoint'lerine daha sıkı limit
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -67,29 +75,33 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
 // ─── GENEL MİDDLEWARE'LER ────────────────────────────────────────
-
-// JSON ve URL-encoded body parse et
-app.use(express.json({ limit: '10kb' })); // Büyük payload'ları reddet
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-// Cookie parser
+app.use(express.json({ limit: '10mb' })); // Dosya upload'ları için artırıldı
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-
-// NoSQL injection koruması: { $gt: '' } gibi saldırıları temizle
 app.use(mongoSanitize());
-
-// Gzip sıkıştırma
 app.use(compression());
 
-// Loglama (sadece development)
+// Loglama — Winston + Morgan
 if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan('dev', { stream: logger.stream }));
+} else {
+  app.use(morgan('combined', { stream: logger.stream }));
 }
+
+// ─── Static dosyalar (uploads) ────────────────────────────────────
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ─── SWAGGER API Dokümantasyonu ───────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'MERN App API Docs',
+}));
 
 // ─── ROUTES ───────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -98,6 +110,7 @@ app.get('/api/health', (req, res) => {
     message: 'API çalışıyor',
     timestamp: new Date().toISOString(),
     dbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    version: '2.0.0',
   });
 });
 
@@ -109,18 +122,19 @@ app.use('*', (req, res) => {
   });
 });
 
-// ─── GLOBAL ERROR HANDLER (EN SONA) ──────────────────────────────
+// ─── GLOBAL ERROR HANDLER ────────────────────────────────────────
 app.use(errorHandler);
 
 // ─── SOCKET.IO — GERÇEK ZAMANLI CHAT ─────────────────────────────
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
+const Message = require('./models/Message');
+const Notification = require('./models/Notification');
 
 // Online kullanıcıları takip et
-const onlineUsers = new Map(); // userId → socketId
+const onlineUsers = new Map();
 
 io.use(async (socket, next) => {
-  // Socket bağlantısında JWT doğrulama
   try {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error('Token bulunamadı'));
@@ -138,7 +152,7 @@ io.use(async (socket, next) => {
 
 io.on('connection', (socket) => {
   const user = socket.user;
-  console.log(`🟢 Kullanıcı bağlandı: ${user.name} (${socket.id})`);
+  logger.info(`🟢 Kullanıcı bağlandı: ${user.name} (${socket.id})`);
 
   // Online kullanıcı listesine ekle
   onlineUsers.set(user._id.toString(), {
@@ -157,19 +171,29 @@ io.on('connection', (socket) => {
   // ─── Odaya katıl ──────────────────────────────────────────────
   socket.on('joinRoom', (room) => {
     socket.join(room);
-    console.log(`${user.name} → ${room} odasına katıldı`);
+    logger.debug(`${user.name} → ${room} odasına katıldı`);
+  });
+
+  // ─── Odadan ayrıl ─────────────────────────────────────────────
+  socket.on('leaveRoom', (room) => {
+    socket.leave(room);
+    logger.debug(`${user.name} → ${room} odasından ayrıldı`);
   });
 
   // ─── Mesaj gönder ─────────────────────────────────────────────
-  socket.on('sendMessage', async ({ content, room = 'general' }) => {
+  socket.on('sendMessage', async ({ content, room = 'general', type = 'text', fileData = null }) => {
     try {
-      if (!content || content.trim().length === 0) return;
-      if (content.length > 1000) return;
+      if (type === 'text' && (!content || content.trim().length === 0)) return;
+      if (type === 'text' && content.length > 1000) return;
 
-      // Mesajı veritabanına kaydet
-      const message = await saveMessage(content.trim(), user._id, room);
+      const message = await saveMessage(
+        type === 'text' ? content.trim() : (content || fileData?.fileName || 'Dosya'),
+        user._id,
+        room,
+        type,
+        fileData
+      );
 
-      // Odadaki herkese gönder
       io.to(room).emit('newMessage', {
         _id: message._id,
         content: message.content,
@@ -180,10 +204,61 @@ io.on('connection', (socket) => {
           role: user.role,
         },
         room,
+        type: message.type,
+        fileUrl: message.fileUrl,
+        fileName: message.fileName,
+        fileSize: message.fileSize,
+        fileType: message.fileType,
+        isEdited: false,
+        isDeleted: false,
         createdAt: message.createdAt,
       });
     } catch (err) {
+      logger.error('Mesaj gönderme hatası:', err);
       socket.emit('error', { message: 'Mesaj gönderilemedi' });
+    }
+  });
+
+  // ─── Mesaj düzenle ────────────────────────────────────────────
+  socket.on('editMessage', async ({ messageId, content, room }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message || message.sender.toString() !== user._id.toString()) return;
+
+      message.content = content.trim();
+      message.isEdited = true;
+      message.editedAt = new Date();
+      await message.save();
+
+      io.to(room).emit('messageEdited', {
+        messageId,
+        content: message.content,
+        isEdited: true,
+        editedAt: message.editedAt,
+      });
+    } catch (err) {
+      logger.error('Mesaj düzenleme hatası:', err);
+    }
+  });
+
+  // ─── Mesaj sil ────────────────────────────────────────────────
+  socket.on('deleteMessage', async ({ messageId, room }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) return;
+
+      const isOwner = message.sender.toString() === user._id.toString();
+      const isAdmin = ['admin', 'moderator'].includes(user.role);
+      if (!isOwner && !isAdmin) return;
+
+      message.isDeleted = true;
+      message.deletedAt = new Date();
+      message.content = 'Bu mesaj silindi';
+      await message.save();
+
+      io.to(room).emit('messageDeleted', { messageId });
+    } catch (err) {
+      logger.error('Mesaj silme hatası:', err);
     }
   });
 
@@ -196,10 +271,30 @@ io.on('connection', (socket) => {
     });
   });
 
+  // ─── Bildirim gönder (real-time) ──────────────────────────────
+  socket.on('sendNotification', async ({ targetUserId, type, title, message: msg }) => {
+    try {
+      const notification = await Notification.create({
+        userId: targetUserId,
+        type,
+        title,
+        message: msg,
+      });
+
+      // Hedef kullanıcı online ise anlık bildirim gönder
+      const targetSocket = onlineUsers.get(targetUserId);
+      if (targetSocket) {
+        io.to(targetSocket.socketId).emit('newNotification', notification);
+      }
+    } catch (err) {
+      logger.error('Bildirim gönderme hatası:', err);
+    }
+  });
+
   // ─── Bağlantı koptu ───────────────────────────────────────────
   socket.on('disconnect', () => {
     onlineUsers.delete(user._id.toString());
-    console.log(`🔴 Kullanıcı ayrıldı: ${user.name}`);
+    logger.info(`🔴 Kullanıcı ayrıldı: ${user.name}`);
 
     io.emit('onlineUsers', Array.from(onlineUsers.entries()).map(([id, data]) => ({
       userId: id,
@@ -211,23 +306,24 @@ io.on('connection', (socket) => {
 // ─── SUNUCUYU BAŞLAT ──────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
-  console.log(`
-  ╔════════════════════════════════════╗
-  ║   🚀 MERN Backend Başladı!         ║
-  ║   Port: ${PORT}                       ║
-  ║   Ortam: ${process.env.NODE_ENV || 'development'}            ║
-  ╚════════════════════════════════════╝
+  logger.info(`
+  ╔════════════════════════════════════════╗
+  ║   🚀 MERN Backend v2.0 Başladı!       ║
+  ║   Port: ${PORT}                           ║
+  ║   Ortam: ${(process.env.NODE_ENV || 'development').padEnd(17)}    ║
+  ║   API Docs: http://localhost:${PORT}/api-docs ║
+  ╚════════════════════════════════════════╝
   `);
 });
 
 // ─── Beklenmedik hatalar ──────────────────────────────────────────
 process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Promise Rejection:', err);
+  logger.error('❌ Unhandled Promise Rejection:', err);
   httpServer.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
+  logger.error('❌ Uncaught Exception:', err);
   process.exit(1);
 });
 

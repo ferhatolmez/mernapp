@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # ─── MongoDB ─────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: mern-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: mernapp
+    networks:
+      - mern-network
+
+  # ─── Redis ───────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mern-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mern-network
+
+  # ─── Backend ─────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: mern-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+      - redis
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongodb:27017/mernapp
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES: 7d
+      CLIENT_URL: http://localhost
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    networks:
+      - mern-network
+
+  # ─── Frontend ────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: mern-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+  backend_uploads:
+  backend_logs:
+
+networks:
+  mern-network:
+    driver: bridge
