@@ -39,6 +39,6 @@ const roomSchema = new mongoose.Schema(
     }
 );
 
-roomSchema.index({ name: 1 });
+// name field already has unique: true, so manual index is not needed
 
 module.exports = mongoose.model('Room', roomSchema);

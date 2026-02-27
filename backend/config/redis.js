@@ -5,7 +5,16 @@ let redis = null;
 let isConnected = false;
 
 const connectRedis = () => {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const redisUrl = process.env.REDIS_URL;
+
+    if (!redisUrl) {
+        if (process.env.NODE_ENV === 'production') {
+            logger.info('ℹ️ Redis URL tanımlı değil — Cache devre dışı bırakıldı (Opsiyonel)');
+        } else {
+            logger.warn('⚠️ Redis URL tanımlı değil — uygulama Redis olmadan çalışacak');
+        }
+        return null;
+    }
 
     try {
         redis = new Redis(redisUrl, {
@@ -13,7 +22,7 @@ const connectRedis = () => {
             retryStrategy(times) {
                 if (times > 3) {
                     logger.warn('Redis bağlantısı kurulamadı — cache devre dışı');
-                    return null; // Yeniden denemeyi durdur
+                    return null;
                 }
                 return Math.min(times * 200, 2000);
             },
@@ -27,16 +36,14 @@ const connectRedis = () => {
 
         redis.on('error', (err) => {
             isConnected = false;
-            logger.warn('Redis hatası (cache devre dışı):', err.message);
+            logger.warn(`Redis hatası (cache devre dışı): ${err.message}`);
         });
 
         redis.on('close', () => {
             isConnected = false;
         });
 
-        // Bağlantıyı dene ama hata fırlatma
         redis.connect().catch(() => {
-            logger.warn('Redis bağlantısı kurulamadı — uygulama Redis olmadan çalışacak');
             isConnected = false;
         });
     } catch (err) {
