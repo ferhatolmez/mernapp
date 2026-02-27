@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import NotificationBell from './NotificationBell';
 
 const Navbar = ({ onMenuToggle }) => {
-  const { user, logout, isAdmin, isModerator } = useAuth();
+  const { user, logout, isModerator } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const toast = useToast();
   const navigate = useNavigate();
