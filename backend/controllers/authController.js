@@ -60,43 +60,17 @@ exports.register = asyncHandler(async (req, res) => {
     // Email gönderilemese bile kayıt tamamlansın
   }
 
-  // Token'ları üret
-  const accessToken = generateAccessToken(user._id, user.role);
-  const refreshTokenValue = generateRefreshToken(user._id);
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
-
-  await RefreshToken.create({
-    token: refreshTokenValue,
-    userId: user._id,
-    expiresAt,
-    userAgent: req.headers['user-agent'],
-    ipAddress: req.ip,
-  });
-
   // Hoşgeldin bildirimi
   await Notification.create({
     userId: user._id,
     type: 'welcome',
     title: 'Hoş Geldiniz! 🎉',
-    message: `Merhaba ${user.name}, MERN App ailesine hoş geldiniz!`,
-  });
-
-  res.cookie('refreshToken', refreshTokenValue, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    message: `Merhaba ${user.name}, MERN App ailesine kayıt oldunuz. Lütfen email adresinizi doğrulayın.`,
   });
 
   res.status(201).json({
     success: true,
-    message: 'Kayıt başarılı. Lütfen email adresinizi doğrulayın.',
-    data: {
-      user,
-      accessToken,
-    },
+    message: 'Kayıt başarılı. Lütfen giriş yapmadan önce email adresinizi doğrulayın.',
   });
 });
 
@@ -162,6 +136,13 @@ exports.login = asyncHandler(async (req, res) => {
     return res.status(401).json({
       success: false,
       message: 'Email veya şifre hatalı',
+    });
+  }
+
+  if (!user.isEmailVerified) {
+    return res.status(403).json({
+      success: false,
+      message: 'Lütfen giriş yapmadan önce email adresinizi doğrulayın.',
     });
   }
 

@@ -56,10 +56,8 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await api.post('/auth/register', { name, email, password });
-      const { user, accessToken } = response.data.data;
-      localStorage.setItem('accessToken', accessToken);
-      dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
-      return { success: true };
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: true, message: response.data.message };
     } catch (error) {
       const message = error.response?.data?.message || 'Kayıt başarısız';
       dispatch({ type: 'AUTH_FAIL', payload: message });

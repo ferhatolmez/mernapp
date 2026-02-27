@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const Register = () => {
 
   const { register, isAuthenticated, clearError } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   useEffect(() => {
     if (isAuthenticated) navigate('/dashboard');
@@ -56,6 +58,9 @@ const Register = () => {
     const result = await register(formData.name, formData.email, formData.password);
     if (!result.success) {
       setErrors({ general: result.message });
+    } else {
+      toast.success(result.message || 'Kayıt başarılı. Lütfen email adresinizi doğrulayın.');
+      navigate('/login');
     }
     setIsSubmitting(false);
   };

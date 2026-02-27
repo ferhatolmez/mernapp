@@ -20,6 +20,7 @@ import Chat from './pages/Chat';
 import AdminPanel from './pages/AdminPanel';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
+import VerifyEmail from './pages/VerifyEmail';
 
 // Sayfa geçiş animasyonu
 const pageVariants = {
@@ -48,6 +49,7 @@ const AnimatedRoutes = () => {
         <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
         <Route path="/forgot-password" element={<AnimatedPage><ForgotPassword /></AnimatedPage>} />
         <Route path="/reset-password" element={<AnimatedPage><ResetPassword /></AnimatedPage>} />
+        <Route path="/verify-email" element={<AnimatedPage><VerifyEmail /></AnimatedPage>} />
 
         <Route element={
           <PrivateRoute>

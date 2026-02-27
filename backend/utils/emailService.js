@@ -4,66 +4,67 @@ const logger = require('./logger');
 let transporter;
 
 const createTransporter = async () => {
-    if (transporter) return transporter;
+  if (transporter) return transporter;
 
-    if (process.env.NODE_ENV === 'production') {
-        // Production: Gerçek SMTP
-        transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT) || 587,
-            secure: process.env.EMAIL_PORT === '465',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-    } else {
-        // Development: Ethereal (sahte SMTP)
-        const testAccount = await nodemailer.createTestAccount();
-        transporter = nodemailer.createTransport({
-            host: 'smtp.ethereal.email',
-            port: 587,
-            secure: false,
-            auth: {
-                user: testAccount.user,
-                pass: testAccount.pass,
-            },
-        });
-        logger.info(`📧 Ethereal email hesabı: ${testAccount.user}`);
-    }
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER) {
+    // Gerçek SMTP
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT) || 587,
+      secure: process.env.EMAIL_PORT === '465',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  } else {
+    // Development: Ethereal (sahte SMTP)
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    logger.info(`📧 Ethereal email hesabı: ${testAccount.user}`);
+  }
 
-    return transporter;
+  return transporter;
 };
 
 const sendEmail = async ({ to, subject, html }) => {
-    try {
-        const transport = await createTransporter();
-        const info = await transport.sendMail({
-            from: process.env.EMAIL_FROM || '"MERN App" <noreply@mernapp.com>',
-            to,
-            subject,
-            html,
-        });
+  try {
+    const transport = await createTransporter();
+    const info = await transport.sendMail({
+      from: process.env.EMAIL_FROM || '"MERN App" <noreply@mernapp.com>',
+      to,
+      subject,
+      html,
+    });
 
-        if (process.env.NODE_ENV !== 'production') {
-            logger.info(`📧 Email preview: ${nodemailer.getTestMessageUrl(info)}`);
-        }
-
-        return info;
-    } catch (error) {
-        logger.error('Email gönderme hatası:', error);
-        throw error;
+    const testMessageUrl = nodemailer.getTestMessageUrl(info);
+    if (testMessageUrl) {
+      logger.info(`📧 Email preview: ${testMessageUrl}`);
     }
+
+    return info;
+  } catch (error) {
+    logger.error('Email gönderme hatası:', error);
+    throw error;
+  }
 };
 
 // ─── Email Templates ────────────────────────────────────────────────
 
 const sendVerificationEmail = async (email, token) => {
-    const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
-    await sendEmail({
-        to: email,
-        subject: '📧 Email Adresinizi Doğrulayın — MERN App',
-        html: `
+  const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+  await sendEmail({
+    to: email,
+    subject: '📧 Email Adresinizi Doğrulayın — MERN App',
+    html: `
       <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #0f172a; color: #e2e8f0; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #818cf8; font-size: 28px;">⚡ MERN App</h1>
@@ -80,15 +81,15 @@ const sendVerificationEmail = async (email, token) => {
         <p style="color: #475569; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} MERN App</p>
       </div>
     `,
-    });
+  });
 };
 
 const sendPasswordResetEmail = async (email, token) => {
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
-    await sendEmail({
-        to: email,
-        subject: '🔐 Şifre Sıfırlama — MERN App',
-        html: `
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+  await sendEmail({
+    to: email,
+    subject: '🔐 Şifre Sıfırlama — MERN App',
+    html: `
       <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #0f172a; color: #e2e8f0; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #818cf8; font-size: 28px;">⚡ MERN App</h1>
@@ -105,11 +106,11 @@ const sendPasswordResetEmail = async (email, token) => {
         <p style="color: #475569; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} MERN App</p>
       </div>
     `,
-    });
+  });
 };
 
 module.exports = {
-    sendEmail,
-    sendVerificationEmail,
-    sendPasswordResetEmail,
+  sendEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
 };
