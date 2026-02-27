@@ -55,11 +55,14 @@ exports.register = asyncHandler(async (req, res) => {
   // Tek seferde veritabanına kaydet (Hashing pre-save hook'ta yapılıyor)
   await user.save();
 
-  // Email doğrulama mailini Gönder (Asenkron - Kullanıcıyı bekletmez)
-  logger.info(`Email doğrulama maili sıraya alındı: ${user.email}`);
-  sendVerificationEmail(user.email, verificationToken)
-    .then(() => logger.info(`Email doğrulama maili başarıyla gönderildi: ${user.email}`))
-    .catch((err) => logger.error(`Email gönderme hatası (${user.email}):`, err));
+  // Email doğrulama mailini Gönder (Awaited for reliability)
+  try {
+    await sendVerificationEmail(user.email, verificationToken);
+    logger.info(`Email doğrulama maili başarıyla gönderildi: ${user.email}`);
+  } catch (err) {
+    logger.error(`Email gönderme hatası (${user.email}):`, err);
+    // Note: We don't fail registration if email fails, but it is now logged/awaited
+  }
 
   // Hoşgeldin bildirimini arka plana al
   Notification.create({
@@ -230,14 +233,17 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.generatePasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  // Email gönderimini arka plana al
-  sendPasswordResetEmail(user.email, resetToken)
-    .then(() => logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`))
-    .catch(async (err) => {
-      logger.error('Email gönderme hatası:', err);
-      // Not: Artık asenkron olduğu için kullanıcıya hata dönmek mümkün değil, 
-      // ancak email servisinin başarısız olduğu durumlarda loglara bakılmalı.
+  // Email gönderimini bekle (Güvenilirlik için)
+  try {
+    await sendPasswordResetEmail(user.email, resetToken);
+    logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`);
+  } catch (err) {
+    logger.error('Email gönderme hatası:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Email gönderilemedi. Lütfen daha sonra tekrar deneyin.',
     });
+  }
 
   res.json({
     success: true,
