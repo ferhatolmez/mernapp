@@ -30,7 +30,7 @@ const httpServer = http.createServer(app);
 // ─── Socket.io başlat ─────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || 'https://mernapp-ecru.vercel.app',
     credentials: true,
   },
   maxHttpBufferSize: 10 * 1024 * 1024, // 10MB (dosya paylaşımı için)
