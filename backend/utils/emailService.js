@@ -1,24 +1,45 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
+require('dotenv').config();
 
 let transporter;
 
 const createTransporter = async () => {
   if (transporter) return transporter;
 
-  if (process.env.EMAIL_HOST && process.env.EMAIL_USER) {
-    // Gerçek SMTP
-    transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_PORT === '465',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  } else {
+  // Gmail için özel yapılandırma kontrolü
+  const isGmail =
+    process.env.EMAIL_HOST === 'smtp.gmail.com' ||
+    (process.env.EMAIL_USER && process.env.EMAIL_USER.endsWith('@gmail.com'));
+
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    if (isGmail) {
+      logger.info('📧 Gmail SMTP servisi yapılandırılıyor...');
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+    } else if (process.env.EMAIL_HOST) {
+      // Diğer Gerçek SMTP servisleri
+      logger.info(`📧 SMTP servisi yapılandırılıyor: ${process.env.EMAIL_HOST}`);
+      transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT) || 587,
+        secure: process.env.EMAIL_PORT === '465',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+    }
+  }
+
+  if (!transporter) {
     // Development: Ethereal (sahte SMTP)
+    logger.warn('⚠️ SMTP ayarları eksik veya geçersiz. Ethereal test servisine bağlanılıyor...');
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
@@ -29,7 +50,7 @@ const createTransporter = async () => {
         pass: testAccount.pass,
       },
     });
-    logger.info(`📧 Ethereal email hesabı: ${testAccount.user}`);
+    logger.info(`📧 Ethereal test hesabı oluşturuldu: ${testAccount.user}`);
   }
 
   return transporter;
