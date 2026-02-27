@@ -55,14 +55,10 @@ exports.register = asyncHandler(async (req, res) => {
   // Tek seferde veritabanına kaydet (Hashing pre-save hook'ta yapılıyor)
   await user.save();
 
-  // Email doğrulama mailini Gönder (Awaited for reliability)
-  try {
-    await sendVerificationEmail(user.email, verificationToken);
-    logger.info(`Email doğrulama maili başarıyla gönderildi: ${user.email}`);
-  } catch (err) {
-    logger.error(`Email gönderme hatası (${user.email}):`, err);
-    // Note: We don't fail registration if email fails, but it is now logged/awaited
-  }
+  // Email doğrulama mailini Gönder (Non-blocking for UI responsiveness)
+  sendVerificationEmail(user.email, verificationToken)
+    .then(() => logger.info(`Email doğrulama maili başarıyla gönderildi: ${user.email}`))
+    .catch((err) => logger.error(`Email gönderme hatası (${user.email}):`, err));
 
   // Hoşgeldin bildirimini arka plana al
   Notification.create({
@@ -233,17 +229,10 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.generatePasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  // Email gönderimini bekle (Güvenilirlik için)
-  try {
-    await sendPasswordResetEmail(user.email, resetToken);
-    logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`);
-  } catch (err) {
-    logger.error('Email gönderme hatası:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Email gönderilemedi. Lütfen daha sonra tekrar deneyin.',
-    });
-  }
+  // Email gönderimini arka plana al (UI gecikmemesi için)
+  sendPasswordResetEmail(user.email, resetToken)
+    .then(() => logger.info(`Şifre sıfırlama maili gönderildi: ${user.email}`))
+    .catch((err) => logger.error('Email gönderme fail:', err));
 
   res.json({
     success: true,

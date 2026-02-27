@@ -33,6 +33,8 @@ const createTransporter = async () => {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
+        connectionTimeout: 5000, // 5 saniye
+        greetingTimeout: 5000,
       });
     }
   }
@@ -49,6 +51,8 @@ const createTransporter = async () => {
         user: testAccount.user,
         pass: testAccount.pass,
       },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
     });
     logger.info(`📧 Ethereal test hesabı oluşturuldu: ${testAccount.user}`);
   }
