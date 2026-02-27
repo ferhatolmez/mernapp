@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import Pagination from '../components/Pagination';
 
 const AdminPanel = () => {
   const { isModerator } = useAuth();
-  const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
@@ -15,7 +14,6 @@ const AdminPanel = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [editingUser, setEditingUser] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -40,7 +38,7 @@ const AdminPanel = () => {
 
   useEffect(() => {
     fetchUsers(1);
-  }, [search, roleFilter]);
+  }, [search, roleFilter, fetchUsers]);
 
   const showSuccess = (msg) => {
     setSuccessMessage(msg);
