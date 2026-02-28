@@ -9,6 +9,8 @@ const {
     getRooms,
     createRoom,
     uploadFile,
+    accessChat,
+    fetchChats,
 } = require('../controllers/chatController');
 const protect = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
@@ -35,10 +37,32 @@ const chatUpload = multer({
 
 /**
  * @swagger
+ * /chat:
+ *   get:
+ *     tags: [Chat]
+ *     summary: Kullanıcının dahil olduğu odaları listele
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/', protect, fetchChats);
+
+/**
+ * @swagger
+ * /chat/access:
+ *   post:
+ *     tags: [Chat]
+ *     summary: Birebir sohbet odasına eriş veya oluştur
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/access', protect, accessChat);
+
+/**
+ * @swagger
  * /chat/rooms:
  *   get:
  *     tags: [Chat]
- *     summary: Chat odalarını listele
+ *     summary: Genel Chat odalarını listele
  *     security:
  *       - bearerAuth: []
  */

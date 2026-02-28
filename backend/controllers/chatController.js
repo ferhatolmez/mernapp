@@ -117,7 +117,69 @@ exports.deleteMessage = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Mesaj silindi' });
 });
 
-// ─── ODALARI LİSTELE ─────────────────────────────────────────────
+// ─── BİREBİR (ÖZEL) SOHBETE ERİŞ VEYA OLUŞTUR ────────────────────────
+// POST /api/chat/access
+exports.accessChat = asyncHandler(async (req, res) => {
+  const { userId } = req.body; // Sohbet edilecek hedefin ID'si
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: 'Kullanıcı ID (userId) gönderilmedi' });
+  }
+
+  // Room adına iki kullanıcının ID'sini sıralı şekilde birleştirerek isim veriyoruz
+  // Örn: private_123_456
+  const ids = [req.user._id.toString(), userId].sort();
+  const roomName = `private_${ids[0]}_${ids[1]}`;
+
+  let isRoom = await Room.findOne({ name: roomName }).populate('createdBy', '-password');
+
+  if (isRoom) {
+    res.json({ success: true, data: { room: isRoom } });
+  } else {
+    // Oda yoksa yeni oluştur
+    var roomData = {
+      name: roomName,
+      type: 'custom', // veya 'private' olarak değiştirebiliriz şema güncellenirse
+      description: 'Birebir Sohbet',
+      createdBy: req.user._id,
+    };
+
+    try {
+      const createdRoom = await Room.create(roomData);
+      const FullRoom = await Room.findOne({ _id: createdRoom._id }).populate('createdBy', '-password');
+      res.status(200).json({ success: true, data: { room: FullRoom } });
+    } catch (error) {
+      res.status(400);
+      throw new Error(error.message);
+    }
+  }
+});
+
+// ─── KULLANICININ TÜM SOHBETLERİNİ GETİR ──────────────────────────
+// GET /api/chat/
+exports.fetchChats = asyncHandler(async (req, res) => {
+  try {
+    // private_ ile başlayan ve içinde kullanıcının ID'si geçenleri ara
+    const regex = new RegExp(`private_.*${req.user._id}.*`);
+
+    const results = await Room.find({
+      $or: [
+        { type: { $ne: 'custom' } }, // Genel, random, tech
+        { name: { $regex: regex } }, // Kullanıcının dahil olduğu private odalar
+        { createdBy: req.user._id }
+      ]
+    })
+      .populate('createdBy', '-password')
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({ success: true, data: { rooms: results } });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
+// ─── ODALARI LİSTELE (Tüm public odalar) ──────────────────────────
 // GET /api/chat/rooms
 exports.getRooms = asyncHandler(async (req, res) => {
   let rooms = await Room.find().sort({ isDefault: -1, name: 1 }).lean();

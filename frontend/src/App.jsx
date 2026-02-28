@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ChatProvider } from './context/ChatContext';
 import { PrivateRoute, RoleRoute } from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -99,24 +100,26 @@ function App() {
       <ToastProvider>
         <AuthProvider>
           <NotificationProvider>
-            <BrowserRouter>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 3500,
-                  style: {
-                    background: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                  },
-                  success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
-                  error: { iconTheme: { primary: '#ef4444', secondary: '#fff' }, duration: 5000 },
-                }}
-              />
-              <AnimatedRoutes />
-            </BrowserRouter>
+            <ChatProvider>
+              <BrowserRouter>
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 3500,
+                    style: {
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                    },
+                    success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
+                    error: { iconTheme: { primary: '#ef4444', secondary: '#fff' }, duration: 5000 },
+                  }}
+                />
+                <AnimatedRoutes />
+              </BrowserRouter>
+            </ChatProvider>
           </NotificationProvider>
         </AuthProvider>
       </ToastProvider>
