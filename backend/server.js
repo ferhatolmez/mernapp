@@ -114,69 +114,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ─── TEMPORARY: Vercel Proxy diagnostic ───────────────────────────
-app.get('/api/debug/proxy-test', async (req, res) => {
-  const result = {
-    VERCEL_API_URL: process.env.VERCEL_API_URL || 'NOT SET',
-    EMAIL_SECRET: process.env.EMAIL_SECRET ? 'SET' : 'NOT SET',
-  };
-
-  if (!process.env.VERCEL_API_URL || !process.env.EMAIL_SECRET) {
-    result.error = 'VERCEL_API_URL or EMAIL_SECRET is missing.';
-    return res.json(result);
-  }
-
-  try {
-    const targetEmail = req.query.email || 'jaxfel3779@gmail.com';
-    const proxyUrl = `${process.env.VERCEL_API_URL}/api/send-email`;
-    result.step = `Sending request to ${proxyUrl}...`;
-
-    const payload = JSON.stringify({
-      to: [targetEmail],
-      subject: '🧪 Vercel Proxy Test from Render',
-      html: '<h1>Proxy Works!</h1><p>Bu email Render sunucusundan Vercel Proxy (https) üzerinden gönderildi.</p>',
-    });
-
-    const https = require('https');
-    const data = await new Promise((resolve, reject) => {
-      const request = https.request(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.EMAIL_SECRET}`,
-          'Content-Length': Buffer.byteLength(payload)
-        }
-      }, (response) => {
-        let body = '';
-        response.on('data', chunk => body += chunk);
-        response.on('end', () => {
-          result.statusCode = response.statusCode;
-          result.rawResponse = body;
-          try {
-            const parsed = JSON.parse(body);
-            resolve(parsed);
-          } catch (e) {
-            resolve({ rawBody: body });
-          }
-        });
-      });
-
-      request.on('error', (err) => reject(err));
-      request.write(payload);
-      request.end();
-    });
-
-    result.proxyResponse = data;
-    result.success = data.success === true;
-  } catch (e) {
-    result.success = false;
-    result.exception = e.message;
-  }
-
-  res.json(result);
-});
-
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
