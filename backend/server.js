@@ -114,6 +114,48 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── TEMPORARY: Resend diagnostic ─────────────────────────────────
+app.get('/api/debug/resend-test', async (req, res) => {
+  const result = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 8) + '...' : 'NOT SET',
+    EMAIL_USER: process.env.EMAIL_USER || 'NOT SET',
+    EMAIL_FROM: process.env.EMAIL_FROM || 'NOT SET',
+  };
+
+  if (!process.env.RESEND_API_KEY) {
+    result.error = 'RESEND_API_KEY environment variable is NOT SET on Render!';
+    return res.json(result);
+  }
+
+  try {
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const targetEmail = req.query.email || 'jaxfel3779@gmail.com';
+    result.step = 'Sending via Resend...';
+
+    const { data, error } = await resend.emails.send({
+      from: 'MERN App <onboarding@resend.dev>',
+      to: [targetEmail],
+      subject: '🧪 Resend Test from Render',
+      html: '<h1>Resend Works!</h1><p>Bu email Render sunucusundan Resend API ile gönderildi.</p>',
+    });
+
+    if (error) {
+      result.success = false;
+      result.resendError = error;
+    } else {
+      result.success = true;
+      result.emailId = data?.id;
+    }
+  } catch (e) {
+    result.success = false;
+    result.exception = e.message;
+  }
+
+  res.json(result);
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
