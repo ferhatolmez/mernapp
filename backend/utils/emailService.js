@@ -62,22 +62,28 @@ const sendEmail = async ({ to, subject, html }) => {
   // Lazy init
   if (!emailProvider) await initEmailProvider();
 
-  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev';
+  let fromAddress;
+  if (emailProvider === 'resend') {
+    // Resend ücretsiz plan: sadece onboarding@resend.dev veya doğrulanmış domain kullanılabilir
+    fromAddress = process.env.EMAIL_FROM || 'MERN App <onboarding@resend.dev>';
+  } else {
+    fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || '"MERN App" <noreply@mernapp.com>';
+  }
 
   logger.debug(`📧 Email gönderiliyor [${emailProvider}]: ${to} | Konu: ${subject}`);
 
   try {
     if (emailProvider === 'resend') {
       const { data, error } = await resendClient.emails.send({
-        from: `MERN App <${fromAddress}>`,
+        from: fromAddress,
         to: [to],
         subject,
         html,
       });
 
       if (error) {
-        logger.error('Resend API hatası:', error);
-        throw new Error(error.message);
+        logger.error('Resend API hatası:', JSON.stringify(error));
+        throw new Error(error.message || JSON.stringify(error));
       }
 
       logger.info(`📧 Email gönderildi [Resend]: ${to} (ID: ${data?.id})`);
