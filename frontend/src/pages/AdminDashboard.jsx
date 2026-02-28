@@ -90,7 +90,7 @@ const AdminDashboard = () => {
       {/* ─── Header ─── */}
       <div className="page-header">
         <div>
-          <h1>📊 Admin Dashboard</h1>
+          <h1>📊 Dashboard</h1>
           <p className="text-muted">Sistem genel görünümü</p>
         </div>
         <button onClick={fetchData} className="btn btn-outline btn-sm">
@@ -122,7 +122,7 @@ const AdminDashboard = () => {
               <>
                 <StatCard icon="👥" label="Toplam Kullanıcı" value={stats?.total} change={12} color="#7c6af8" />
                 <StatCard icon="🆕" label="Bugün Yeni" value={stats?.newToday} color="#22c55e" />
-                <StatCard icon="👑" label="Admin Sayısı" value={stats?.byRole?.find(r => r._id === 'admin')?.count || 0} color="#f59e0b" />
+                <StatCard icon="👑" label="Yetkili Sayısı" value={(stats?.byRole?.find(r => r._id === 'admin')?.count || 0) + (stats?.byRole?.find(r => r._id === 'moderator')?.count || 0)} color="#f59e0b" />
                 <StatCard icon="✅" label="Aktif Kullanıcı" value={stats?.byRole?.reduce((a, r) => a + r.activeCount, 0)} color="#06b6d4" />
               </>
             )}

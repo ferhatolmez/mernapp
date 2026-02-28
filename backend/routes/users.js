@@ -113,7 +113,7 @@ router.delete('/search-history', protect, clearSearchHistory);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/stats', protect, authorize('admin'), cacheMiddleware(60), getUserStats);
+router.get('/stats', protect, authorize('admin', 'moderator'), cacheMiddleware(60), getUserStats);
 
 // ─── Kullanıcı arama (giriş yapmış herkes) ──────────────────────
 router.get('/search', protect, searchUsers);
