@@ -37,7 +37,7 @@ const Chat = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(() => window.innerWidth <= 768);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
@@ -486,20 +486,24 @@ const Chat = () => {
                     setShowSidebar(true);
                   }}
                   style={{
-                    marginRight: '12px',
-                    fontSize: '1.4rem',
-                    background: 'transparent',
-                    border: 'none',
+                    marginRight: '10px',
+                    width: '40px',
+                    height: '40px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '50%',
                     color: 'var(--text-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '4px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-sm)'
                   }}
                   title="Sohbet Listesine Dön"
                 >
-                  ←
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
                 </button>
                 {getChatAvatar(selectedChat) ? (
                   <img
