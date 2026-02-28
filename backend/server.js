@@ -124,51 +124,71 @@ app.get('/api/debug/test-email', async (req, res) => {
     timestamp: new Date().toISOString(),
     env: {
       NODE_ENV: process.env.NODE_ENV,
-      EMAIL_HOST: process.env.EMAIL_HOST || 'NOT SET',
-      EMAIL_PORT: process.env.EMAIL_PORT || 'NOT SET',
       EMAIL_USER: process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '***' : 'NOT SET',
       EMAIL_PASS: process.env.EMAIL_PASS ? '***SET***' : 'NOT SET',
       CLIENT_URL: process.env.CLIENT_URL || 'NOT SET',
     },
-    steps: [],
+    tests: [],
   };
 
+  // Test 1: Gmail service (default - uses port 587)
   try {
-    // Step 1: Create transporter
-    diagnostics.steps.push('Creating Gmail transporter...');
-    const transporter = nodemailer.createTransport({
+    diagnostics.tests.push({ name: 'Gmail service (port 587)', status: 'testing...' });
+    const t1 = nodemailer.createTransport({
       service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      connectionTimeout: 5000,
     });
-    diagnostics.steps.push('✅ Transporter created');
+    await t1.verify();
+    diagnostics.tests[0].status = '✅ OK';
+  } catch (e) {
+    diagnostics.tests[0].status = `❌ ${e.code}: ${e.message}`;
+  }
 
-    // Step 2: Verify connection
-    diagnostics.steps.push('Verifying SMTP connection...');
-    await transporter.verify();
-    diagnostics.steps.push('✅ SMTP connection verified');
+  // Test 2: Direct SSL on port 465
+  try {
+    diagnostics.tests.push({ name: 'Direct SSL (port 465)', status: 'testing...' });
+    const t2 = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      connectionTimeout: 5000,
+    });
+    await t2.verify();
+    diagnostics.tests[1].status = '✅ OK';
 
-    // Step 3: Send test email
-    diagnostics.steps.push(`Sending test email to ${targetEmail}...`);
-    const info = await transporter.sendMail({
+    // If port 465 works, actually send the email
+    diagnostics.tests.push({ name: 'Sending email via 465', status: 'sending...' });
+    const info = await t2.sendMail({
       from: process.env.EMAIL_USER,
       to: targetEmail,
-      subject: '🔧 MERN App — Render Email Diagnostic Test',
-      html: '<h1>Render Email Test</h1><p>Bu email Render sunucusundan gönderildi. Eğer bunu görüyorsanız, email servisi çalışıyor!</p>',
+      subject: '🔧 Render Email Test (Port 465)',
+      html: '<h1>Render Email Test</h1><p>Bu email Render sunucusundan PORT 465 üzerinden gönderildi!</p>',
     });
-    diagnostics.steps.push(`✅ Email sent! MessageId: ${info.messageId}`);
+    diagnostics.tests[2].status = `✅ Sent! ID: ${info.messageId}`;
     diagnostics.success = true;
-    diagnostics.response = info.response;
-  } catch (error) {
-    diagnostics.steps.push(`❌ FAILED: ${error.message}`);
-    diagnostics.success = false;
-    diagnostics.error = {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-    };
+  } catch (e) {
+    const idx = diagnostics.tests.length - 1;
+    diagnostics.tests[idx].status = `❌ ${e.code}: ${e.message}`;
+  }
+
+  // Test 3: STARTTLS on port 587 (explicit)
+  if (!diagnostics.success) {
+    try {
+      diagnostics.tests.push({ name: 'STARTTLS (port 587)', status: 'testing...' });
+      const t3 = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        connectionTimeout: 5000,
+      });
+      await t3.verify();
+      diagnostics.tests[diagnostics.tests.length - 1].status = '✅ OK';
+    } catch (e) {
+      diagnostics.tests[diagnostics.tests.length - 1].status = `❌ ${e.code}: ${e.message}`;
+    }
   }
 
   res.json(diagnostics);
