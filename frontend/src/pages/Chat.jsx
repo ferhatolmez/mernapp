@@ -67,6 +67,18 @@ const Chat = () => {
     };
   }, []);
 
+  // Mobilde donanımsal geri tuşunu (Hardware Back Button) yakalama
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.innerWidth <= 768 && selectedChat && !window.location.hash.includes('chat')) {
+        setSelectedChat(null);
+        setShowSidebar(true);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedChat, setSelectedChat]);
+
   // ═══════════════════════════════════════════════════════
   // 2. KULLANICI ARA (Yeni /api/users/search?q= endpoint)
   // ═══════════════════════════════════════════════════════
@@ -121,6 +133,11 @@ const Chat = () => {
   // ═══════════════════════════════════════════════════════
   const handleSwitchRoom = useCallback((roomObj) => {
     if (selectedChat?._id === roomObj._id) return;
+
+    // Mobilde donanımsal geri tuşu çalışsın diye fake bir URL History (hash) bırakıyoruz
+    if (window.innerWidth <= 768 && !window.location.hash.includes('chat')) {
+      window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
+    }
 
     if (selectedChat && socket) {
       socket.emit('leaveRoom', selectedChat.name);
@@ -482,8 +499,12 @@ const Chat = () => {
                 <button
                   className="hidden-desktop"
                   onClick={() => {
-                    setSelectedChat(null);
-                    setShowSidebar(true);
+                    if (window.location.hash.includes('chat')) {
+                      window.history.back(); // Tetiklendiğinde popstate çalışır ve kapatır
+                    } else {
+                      setSelectedChat(null);
+                      setShowSidebar(true);
+                    }
                   }}
                   style={{
                     marginRight: '10px',
