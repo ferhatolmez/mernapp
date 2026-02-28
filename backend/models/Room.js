@@ -8,7 +8,7 @@ const roomSchema = new mongoose.Schema(
             trim: true,
             unique: true,
             minlength: [2, 'Oda adı en az 2 karakter olmalıdır'],
-            maxlength: [30, 'Oda adı en fazla 30 karakter olabilir'],
+            maxlength: [100, 'Oda adı en fazla 100 karakter olabilir'],
         },
         description: {
             type: String,
@@ -18,7 +18,7 @@ const roomSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ['general', 'random', 'tech', 'custom'],
+            enum: ['general', 'random', 'tech', 'custom', 'private'],
             default: 'custom',
         },
         icon: {
@@ -29,6 +29,10 @@ const roomSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
+        members: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        }],
         isDefault: {
             type: Boolean,
             default: false,

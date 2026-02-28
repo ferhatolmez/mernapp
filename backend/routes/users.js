@@ -14,6 +14,7 @@ const {
   saveSearchHistory,
   getSearchHistory,
   clearSearchHistory,
+  searchUsers,
 } = require('../controllers/userController');
 const protect = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
@@ -113,6 +114,9 @@ router.delete('/search-history', protect, clearSearchHistory);
  *       - bearerAuth: []
  */
 router.get('/stats', protect, authorize('admin'), cacheMiddleware(60), getUserStats);
+
+// ─── Kullanıcı arama (giriş yapmış herkes) ──────────────────────
+router.get('/search', protect, searchUsers);
 
 // ─── Kullanıcı listesi — Admin ve moderatör görebilir ───────────
 /**

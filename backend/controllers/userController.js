@@ -2,6 +2,29 @@ const User = require('../models/User');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { cache } = require('../config/redis');
 
+// ─── KULLANICI ARA (Giriş yapmış herkes) ──────────────────────────
+// GET /api/users/search?q=ali
+exports.searchUsers = asyncHandler(async (req, res) => {
+  const keyword = req.query.q;
+
+  if (!keyword || keyword.trim().length < 1) {
+    return res.json({ success: true, data: { users: [] } });
+  }
+
+  const users = await User.find({
+    _id: { $ne: req.user._id },                // Kendini hariç tut
+    $or: [
+      { name: { $regex: keyword, $options: 'i' } },
+      { email: { $regex: keyword, $options: 'i' } },
+    ],
+  })
+    .select('name email avatar role')
+    .limit(15)
+    .lean();
+
+  res.json({ success: true, data: { users } });
+});
+
 // ─── TÜM KULLANICILARI GETİR (Admin) ─────────────────────────────
 // GET /api/users?page=1&limit=10&search=ali&role=user&sort=-createdAt
 exports.getUsers = asyncHandler(async (req, res) => {

@@ -120,38 +120,43 @@ exports.deleteMessage = asyncHandler(async (req, res) => {
 // ─── BİREBİR (ÖZEL) SOHBETE ERİŞ VEYA OLUŞTUR ────────────────────────
 // POST /api/chat/access
 exports.accessChat = asyncHandler(async (req, res) => {
-  const { userId } = req.body; // Sohbet edilecek hedefin ID'si
+  const { userId } = req.body;
 
   if (!userId) {
     return res.status(400).json({ success: false, message: 'Kullanıcı ID (userId) gönderilmedi' });
   }
 
-  // Room adına iki kullanıcının ID'sini sıralı şekilde birleştirerek isim veriyoruz
-  // Örn: private_123_456
+  // Room adına iki kullanıcının ID'sini sıralı şekilde birleştiriyoruz
   const ids = [req.user._id.toString(), userId].sort();
   const roomName = `private_${ids[0]}_${ids[1]}`;
 
-  let isRoom = await Room.findOne({ name: roomName }).populate('createdBy', '-password');
+  let existingRoom = await Room.findOne({ name: roomName })
+    .populate('members', 'name email avatar role')
+    .populate('createdBy', 'name email avatar');
 
-  if (isRoom) {
-    res.json({ success: true, data: { room: isRoom } });
-  } else {
-    // Oda yoksa yeni oluştur
-    var roomData = {
+  if (existingRoom) {
+    return res.json({ success: true, data: { room: existingRoom } });
+  }
+
+  // Oda yoksa yeni oluştur
+  try {
+    const createdRoom = await Room.create({
       name: roomName,
-      type: 'custom', // veya 'private' olarak değiştirebiliriz şema güncellenirse
+      type: 'private',
       description: 'Birebir Sohbet',
+      icon: '👤',
       createdBy: req.user._id,
-    };
+      members: [req.user._id, userId],
+    });
 
-    try {
-      const createdRoom = await Room.create(roomData);
-      const FullRoom = await Room.findOne({ _id: createdRoom._id }).populate('createdBy', '-password');
-      res.status(200).json({ success: true, data: { room: FullRoom } });
-    } catch (error) {
-      res.status(400);
-      throw new Error(error.message);
-    }
+    const fullRoom = await Room.findById(createdRoom._id)
+      .populate('members', 'name email avatar role')
+      .populate('createdBy', 'name email avatar');
+
+    res.status(200).json({ success: true, data: { room: fullRoom } });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
   }
 });
 
@@ -159,17 +164,15 @@ exports.accessChat = asyncHandler(async (req, res) => {
 // GET /api/chat/
 exports.fetchChats = asyncHandler(async (req, res) => {
   try {
-    // private_ ile başlayan ve içinde kullanıcının ID'si geçenleri ara
-    const regex = new RegExp(`private_.*${req.user._id}.*`);
-
     const results = await Room.find({
       $or: [
-        { type: { $ne: 'custom' } }, // Genel, random, tech
-        { name: { $regex: regex } }, // Kullanıcının dahil olduğu private odalar
-        { createdBy: req.user._id }
+        { type: { $in: ['general', 'random', 'tech'] } },   // Genel odalar
+        { members: req.user._id },                            // Private odalar (members array'inde)
+        { type: 'private', name: { $regex: req.user._id.toString() } }, // Eski oda verileri
       ]
     })
-      .populate('createdBy', '-password')
+      .populate('members', 'name email avatar role')
+      .populate('createdBy', 'name email avatar')
       .sort({ updatedAt: -1 });
 
     res.status(200).json({ success: true, data: { rooms: results } });
