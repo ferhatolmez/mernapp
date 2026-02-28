@@ -114,40 +114,60 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ─── TEMPORARY: Resend diagnostic ─────────────────────────────────
-app.get('/api/debug/resend-test', async (req, res) => {
+// ─── TEMPORARY: Vercel Proxy diagnostic ───────────────────────────
+app.get('/api/debug/proxy-test', async (req, res) => {
   const result = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 8) + '...' : 'NOT SET',
-    EMAIL_USER: process.env.EMAIL_USER || 'NOT SET',
-    EMAIL_FROM: process.env.EMAIL_FROM || 'NOT SET',
+    VERCEL_API_URL: process.env.VERCEL_API_URL || 'NOT SET',
+    EMAIL_SECRET: process.env.EMAIL_SECRET ? 'SET' : 'NOT SET',
   };
 
-  if (!process.env.RESEND_API_KEY) {
-    result.error = 'RESEND_API_KEY environment variable is NOT SET on Render!';
+  if (!process.env.VERCEL_API_URL || !process.env.EMAIL_SECRET) {
+    result.error = 'VERCEL_API_URL or EMAIL_SECRET is missing.';
     return res.json(result);
   }
 
   try {
-    const { Resend } = require('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
     const targetEmail = req.query.email || 'jaxfel3779@gmail.com';
-    result.step = 'Sending via Resend...';
+    const proxyUrl = `${process.env.VERCEL_API_URL}/api/send-email`;
+    result.step = `Sending request to ${proxyUrl}...`;
 
-    const { data, error } = await resend.emails.send({
-      from: 'MERN App <onboarding@resend.dev>',
+    const payload = JSON.stringify({
       to: [targetEmail],
-      subject: '🧪 Resend Test from Render',
-      html: '<h1>Resend Works!</h1><p>Bu email Render sunucusundan Resend API ile gönderildi.</p>',
+      subject: '🧪 Vercel Proxy Test from Render',
+      html: '<h1>Proxy Works!</h1><p>Bu email Render sunucusundan Vercel Proxy (https) üzerinden gönderildi.</p>',
     });
 
-    if (error) {
-      result.success = false;
-      result.resendError = error;
-    } else {
-      result.success = true;
-      result.emailId = data?.id;
-    }
+    const https = require('https');
+    const data = await new Promise((resolve, reject) => {
+      const request = https.request(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.EMAIL_SECRET}`,
+          'Content-Length': Buffer.byteLength(payload)
+        }
+      }, (response) => {
+        let body = '';
+        response.on('data', chunk => body += chunk);
+        response.on('end', () => {
+          result.statusCode = response.statusCode;
+          result.rawResponse = body;
+          try {
+            const parsed = JSON.parse(body);
+            resolve(parsed);
+          } catch (e) {
+            resolve({ rawBody: body });
+          }
+        });
+      });
+
+      request.on('error', (err) => reject(err));
+      request.write(payload);
+      request.end();
+    });
+
+    result.proxyResponse = data;
+    result.success = data.success === true;
   } catch (e) {
     result.success = false;
     result.exception = e.message;
