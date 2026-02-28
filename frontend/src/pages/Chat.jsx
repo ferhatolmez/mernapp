@@ -58,6 +58,15 @@ const Chat = () => {
     fetchChats();
   }, [fetchChats]);
 
+  // Mobil cihazlarda chat açıldığında body scroll'u kapat (Header'ın navbar altına kaçmasını önler)
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   // ═══════════════════════════════════════════════════════
   // 2. KULLANICI ARA (Yeni /api/users/search?q= endpoint)
   // ═══════════════════════════════════════════════════════

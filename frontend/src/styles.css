@@ -2670,7 +2670,7 @@ textarea:focus {
 
 .chat-page {
   display: flex;
-  height: calc(100vh - var(--navbar-h));
+  height: calc(100dvh - var(--navbar-h));
   background: var(--bg-base);
   overflow: hidden;
   position: relative;
@@ -3137,7 +3137,6 @@ textarea:focus {
 /* Mobilde her zaman göster veya dokunulabilir boyutta olsun (aktif) */
 @media (max-width: 768px) {
   .message-actions {
-    display: flex;
     top: auto;
     bottom: -12px;
     right: 8px;
@@ -3145,7 +3144,8 @@ textarea:focus {
   }
 }
 
-.message-bubble:hover .message-actions {
+.message-bubble:hover .message-actions,
+.message-actions.active {
   display: flex;
 }
 
