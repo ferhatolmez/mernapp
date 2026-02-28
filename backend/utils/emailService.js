@@ -1,88 +1,101 @@
+const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
-require('dotenv').config();
 
-let transporter;
+let emailProvider = null; // 'resend' or 'smtp'
+let resendClient = null;
+let smtpTransporter = null;
 
-const createTransporter = async () => {
-  if (transporter) return transporter;
+// ─── Email provider'ı başlat ──────────────────────────────────────
+const initEmailProvider = async () => {
+  // 1) Resend API varsa tercih et (Render'da SMTP engeli yüzünden)
+  if (process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+    emailProvider = 'resend';
+    logger.info('📧 Email servisi: Resend API');
+    return;
+  }
 
-  // Gmail için özel yapılandırma kontrolü
-  const isGmail =
-    process.env.EMAIL_HOST === 'smtp.gmail.com' ||
-    (process.env.EMAIL_USER && process.env.EMAIL_USER.endsWith('@gmail.com'));
-
+  // 2) SMTP fallback (local development için)
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    const isGmail =
+      process.env.EMAIL_HOST === 'smtp.gmail.com' ||
+      (process.env.EMAIL_USER && process.env.EMAIL_USER.endsWith('@gmail.com'));
+
     if (isGmail) {
-      logger.info('📧 Gmail SMTP servisi yapılandırılıyor...');
-      transporter = nodemailer.createTransport({
+      smtpTransporter = nodemailer.createTransport({
         service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
       });
     } else if (process.env.EMAIL_HOST) {
-      // Diğer Gerçek SMTP servisleri
-      logger.info(`📧 SMTP servisi yapılandırılıyor: ${process.env.EMAIL_HOST}`);
-      transporter = nodemailer.createTransport({
+      smtpTransporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT) || 587,
         secure: process.env.EMAIL_PORT === '465',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        connectionTimeout: 5000, // 5 saniye
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        connectionTimeout: 5000,
         greetingTimeout: 5000,
       });
     }
+    emailProvider = 'smtp';
+    logger.info(`📧 Email servisi: SMTP (${process.env.EMAIL_HOST || 'gmail'})`);
+    return;
   }
 
-  if (!transporter) {
-    // Development: Ethereal (sahte SMTP)
-    logger.warn('⚠️ SMTP ayarları eksik veya geçersiz. Ethereal test servisine bağlanılıyor...');
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-    });
-    logger.info(`📧 Ethereal test hesabı oluşturuldu: ${testAccount.user}`);
-  }
-
-  return transporter;
+  // 3) Hiçbiri yoksa — Ethereal (development test)
+  logger.warn('⚠️ Email ayarları eksik. Ethereal test servisi kullanılacak.');
+  const testAccount = await nodemailer.createTestAccount();
+  smtpTransporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: { user: testAccount.user, pass: testAccount.pass },
+  });
+  emailProvider = 'smtp';
+  logger.info(`📧 Ethereal test hesabı: ${testAccount.user}`);
 };
 
+// ─── Email gönder ─────────────────────────────────────────────────
 const sendEmail = async ({ to, subject, html }) => {
+  // Lazy init
+  if (!emailProvider) await initEmailProvider();
+
+  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev';
+
+  logger.debug(`📧 Email gönderiliyor [${emailProvider}]: ${to} | Konu: ${subject}`);
+
   try {
-    const transport = await createTransporter();
+    if (emailProvider === 'resend') {
+      const { data, error } = await resendClient.emails.send({
+        from: `MERN App <${fromAddress}>`,
+        to: [to],
+        subject,
+        html,
+      });
 
-    const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || '"MERN App" <noreply@mernapp.com>';
+      if (error) {
+        logger.error('Resend API hatası:', error);
+        throw new Error(error.message);
+      }
 
-    logger.debug(`📧 Email gönderiliyor: ${to} | Konu: ${subject}`);
+      logger.info(`📧 Email gönderildi [Resend]: ${to} (ID: ${data?.id})`);
+      return data;
+    }
 
-    const info = await transport.sendMail({
-      from: fromAddress,
-      to,
-      subject,
-      html,
-    });
+    // SMTP
+    const info = await smtpTransporter.sendMail({ from: fromAddress, to, subject, html });
 
     const testMessageUrl = nodemailer.getTestMessageUrl(info);
     if (testMessageUrl) {
       logger.info(`📧 Email preview: ${testMessageUrl}`);
     }
 
+    logger.info(`📧 Email gönderildi [SMTP]: ${to}`);
     return info;
   } catch (error) {
-    logger.error('Email gönderme hatası:', error);
+    logger.error(`Email gönderme hatası [${emailProvider}]:`, error);
     throw error;
   }
 };
