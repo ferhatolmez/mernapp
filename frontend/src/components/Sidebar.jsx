@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
-    const { user, isModerator } = useAuth();
+    const { user, isAdmin, isModerator } = useAuth();
     const location = useLocation();
 
     const isActive = (path) => location.pathname === path;
