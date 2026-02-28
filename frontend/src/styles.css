@@ -1,55 +1,69 @@
 /* ═══════════════════════════════════════════════════════════════
-   MERN APP — UPDATED STYLES v2
-   Yeni: Light/Dark tema, Toast, Skeleton, Dashboard grafikleri
+   MERN APP — STYLES v3
+   Turuncu + Mor tema, Inter font, modern glassmorphism
 ═══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /* ─── DARK TEMA (default) ───────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #1a1a24;
-  --bg-hover: #22222e;
-  --border: #2a2a38;
-  --border-light: #333344;
-  --text-primary: #f0f0f8;
-  --text-secondary: #9090b0;
-  --accent: #7c6af8;
-  --accent-light: #9d8fff;
-  --accent-hover: #6a58e8;
-  --accent-glow: rgba(124, 106, 248, 0.18);
+  --bg-base: #0b0a10;
+  --bg-surface: #13121a;
+  --bg-elevated: #1c1b26;
+  --bg-hover: #252432;
+  --border: #2e2d3d;
+  --border-light: #3a394d;
+  --text-primary: #f2f0ff;
+  --text-secondary: #9896b0;
+  --accent: #f97316;
+  --accent-light: #fb923c;
+  --accent-hover: #ea580c;
+  --accent-glow: rgba(249, 115, 22, 0.15);
+  --purple: #8b5cf6;
+  --purple-light: #a78bfa;
+  --purple-glow: rgba(139, 92, 246, 0.15);
+  --gradient-primary: linear-gradient(135deg, #f97316, #8b5cf6);
+  --gradient-surface: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(139, 92, 246, 0.08));
   --green: #22c55e;
   --red: #ef4444;
   --yellow: #eab308;
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --skeleton-base: #1a1a28;
-  --skeleton-shine: #252535;
+  --skeleton-base: #1c1b28;
+  --skeleton-shine: #282738;
+  --chat-own-bg: linear-gradient(135deg, #f97316, #d95e0e);
+  --chat-other-bg: var(--bg-elevated);
 }
 
 /* ─── LIGHT TEMA ────────────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg-base: #f4f4f8;
+  --bg-base: #f8f7fc;
   --bg-surface: #ffffff;
-  --bg-elevated: #f0f0f6;
-  --bg-hover: #e8e8f0;
-  --border: #dddde8;
-  --border-light: #ccccdd;
-  --text-primary: #12121e;
-  --text-secondary: #55558a;
-  --accent: #6054e8;
-  --accent-light: #5048d4;
-  --accent-hover: #4e44d0;
-  --accent-glow: rgba(96, 84, 232, 0.12);
+  --bg-elevated: #f3f2fa;
+  --bg-hover: #eceaf5;
+  --border: #e0ddef;
+  --border-light: #d0cde2;
+  --text-primary: #1a1830;
+  --text-secondary: #605c80;
+  --accent: #ea580c;
+  --accent-light: #f97316;
+  --accent-hover: #c2410c;
+  --accent-glow: rgba(234, 88, 12, 0.12);
+  --purple: #7c3aed;
+  --purple-light: #8b5cf6;
+  --purple-glow: rgba(124, 58, 237, 0.10);
+  --gradient-primary: linear-gradient(135deg, #f97316, #8b5cf6);
+  --gradient-surface: linear-gradient(135deg, rgba(249, 115, 22, 0.05), rgba(139, 92, 246, 0.05));
   --green: #16a34a;
   --red: #dc2626;
   --yellow: #ca8a04;
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
-  --skeleton-base: #e8e8f0;
-  --skeleton-shine: #f0f0f8;
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --skeleton-base: #ebe9f5;
+  --skeleton-shine: #f5f3ff;
+  --chat-own-bg: linear-gradient(135deg, #f97316, #d95e0e);
+  --chat-other-bg: var(--bg-elevated);
 }
 
 /* ─── BASE ──────────────────────────────────────────────────────── */
@@ -59,7 +73,7 @@
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 24px;
-  --font-sans: 'Syne', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -3037,7 +3051,7 @@ textarea:focus {
 }
 
 .message-own .message-bubble {
-  background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+  background: var(--chat-own-bg);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -3108,15 +3122,27 @@ textarea:focus {
 /* ─── MESAJ AKSİYONLARI ─────────────────────────────────────── */
 .message-actions {
   position: absolute;
-  top: -8px;
+  top: -12px;
   right: 4px;
   display: none;
-  gap: 2px;
+  gap: 6px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px;
-  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+}
+
+/* Mobilde her zaman göster veya dokunulabilir boyutta olsun (aktif) */
+@media (max-width: 768px) {
+  .message-actions {
+    display: flex;
+    top: auto;
+    bottom: -16px;
+    right: 8px;
+    opacity: 0.9;
+  }
 }
 
 .message-bubble:hover .message-actions {
@@ -3124,15 +3150,21 @@ textarea:focus {
 }
 
 .message-action-btn {
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1rem;
   background: transparent;
-  transition: background var(--transition);
+  transition: all var(--transition);
+  cursor: pointer;
 }
 
 .message-action-btn:hover {
   background: var(--bg-hover);
+  transform: scale(1.1);
 }
 
 .message-edit-form {
@@ -3301,18 +3333,18 @@ textarea:focus {
 }
 
 .send-btn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+  background: var(--gradient-primary);
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(18, 140, 126, 0.3);
+  box-shadow: 0 4px 12px var(--accent-glow);
 }
 
 .send-btn:hover:not(:disabled) {
@@ -3378,9 +3410,10 @@ textarea:focus {
     top: 0;
     bottom: 0;
     width: 85%;
-    max-width: 340px;
+    max-width: 360px;
     transform: translateX(-100%);
     box-shadow: var(--shadow-lg);
+    z-index: 1000;
   }
 
   .chat-sidebar.chat-sidebar-open {
@@ -3392,7 +3425,7 @@ textarea:focus {
   }
 
   .message {
-    max-width: 88%;
+    max-width: 90%;
   }
 
   .chat-header {
@@ -3400,11 +3433,25 @@ textarea:focus {
   }
 
   .messages-container {
-    padding: 16px 12px;
+    padding: 20px 12px;
   }
 
   .chat-input-area {
     padding: 10px 12px;
+  }
+
+  .chat-input-wrapper {
+    gap: 6px;
+  }
+
+  .chat-file-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .send-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 

@@ -315,7 +315,7 @@ const Chat = () => {
       );
       if (otherMember?.avatar) return otherMember.avatar;
       if (otherMember?.name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(otherMember.name)}&background=128C7E&color=fff&size=40`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(otherMember.name)}&background=f97316&color=fff&size=40`;
       }
     }
     return null;
@@ -377,7 +377,7 @@ const Chat = () => {
                       style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
                     >
                       <img
-                        src={usr.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(usr.name)}&size=28&background=128C7E&color=fff`}
+                        src={usr.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(usr.name)}&size=28&background=f97316&color=fff`}
                         alt=""
                         style={{ width: 28, height: 28, borderRadius: '50%' }}
                       />
@@ -521,7 +521,7 @@ const Chat = () => {
                         <img
                           src={
                             msg.sender?.avatar ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || '?')}&size=32&background=7c6af8&color=fff`
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || '?')}&size=32&background=a78bfa&color=fff`
                           }
                           alt=""
                           className="message-avatar"
@@ -681,7 +681,7 @@ const Chat = () => {
           /* Sohbet seçilmemiş */
           <div className="empty-chat" style={{ height: '100%' }}>
             <span style={{ fontSize: '72px' }}>💬</span>
-            <h2 style={{ marginTop: '16px', fontWeight: 800 }}>Mini WhatsApp</h2>
+            <h2 style={{ marginTop: '16px', fontWeight: 800 }}>Sohbet</h2>
             <p style={{ maxWidth: '300px', textAlign: 'center', color: 'var(--text-secondary)' }}>
               Sol panelden bir kişi arayarak veya mevcut bir sohbete tıklayarak mesajlaşmaya başlayın.
             </p>
@@ -692,7 +692,8 @@ const Chat = () => {
                 marginTop: '20px',
                 padding: '12px 24px',
                 borderRadius: '24px',
-                background: 'linear-gradient(135deg, #128C7E, #075E54)',
+                background: 'var(--gradient-primary)',
+                border: 'none',
                 color: '#fff',
                 fontWeight: 700,
                 fontSize: '0.9rem',
