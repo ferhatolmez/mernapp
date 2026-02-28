@@ -1,22 +1,20 @@
-const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
+const fetch = require('node-fetch') || global.fetch; // Use global fetch in Node 18+
 
-let emailProvider = null; // 'resend' or 'smtp'
-let resendClient = null;
+let emailProvider = null; // 'proxy' or 'smtp'
 let smtpTransporter = null;
 
 // ─── Email provider'ı başlat ──────────────────────────────────────
 const initEmailProvider = async () => {
-  // 1) Resend API varsa tercih et (Render'da SMTP engeli yüzünden)
-  if (process.env.RESEND_API_KEY) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
-    emailProvider = 'resend';
-    logger.info('📧 Email servisi: Resend API');
+  // 1) Vercel Proxy varsa tercih et (Render'da SMTP engeli yüzünden)
+  if (process.env.EMAIL_SECRET && process.env.VERCEL_API_URL) {
+    emailProvider = 'proxy';
+    logger.info(`📧 Email servisi: Vercel E-posta Proxy (${process.env.VERCEL_API_URL})`);
     return;
   }
 
-  // 2) SMTP fallback (local development için)
+  // 2) SMTP fallback (local development / SMTP engeli olmayan ortamlar için)
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     const isGmail =
       process.env.EMAIL_HOST === 'smtp.gmail.com' ||
@@ -59,38 +57,37 @@ const initEmailProvider = async () => {
 
 // ─── Email gönder ─────────────────────────────────────────────────
 const sendEmail = async ({ to, subject, html }) => {
-  // Lazy init
   if (!emailProvider) await initEmailProvider();
-
-  let fromAddress;
-  if (emailProvider === 'resend') {
-    // Resend ücretsiz plan: sadece onboarding@resend.dev veya doğrulanmış domain kullanılabilir
-    fromAddress = process.env.EMAIL_FROM || 'MERN App <onboarding@resend.dev>';
-  } else {
-    fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || '"MERN App" <noreply@mernapp.com>';
-  }
 
   logger.debug(`📧 Email gönderiliyor [${emailProvider}]: ${to} | Konu: ${subject}`);
 
   try {
-    if (emailProvider === 'resend') {
-      const { data, error } = await resendClient.emails.send({
-        from: fromAddress,
-        to: [to],
-        subject,
-        html,
+    if (emailProvider === 'proxy') {
+      // Vercel Proxy'sine HTTP POST atıyoruz
+      const proxyUrl = `${process.env.VERCEL_API_URL}/api/send-email`;
+
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.EMAIL_SECRET}`,
+        },
+        body: JSON.stringify({ to, subject, html }),
       });
 
-      if (error) {
-        logger.error('Resend API hatası:', JSON.stringify(error));
-        throw new Error(error.message || JSON.stringify(error));
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        logger.error(`Vercel Proxy Hatası (${response.status}):`, data);
+        throw new Error(data.message || 'E-posta proxy sunucu tarafından reddedildi');
       }
 
-      logger.info(`📧 Email gönderildi [Resend]: ${to} (ID: ${data?.id})`);
+      logger.info(`📧 Email gönderildi [Proxy]: ${to} (ID: ${data.messageId})`);
       return data;
     }
 
-    // SMTP
+    // SMTP Fallback (Local)
+    const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || '"MERN App" <noreply@mernapp.com>';
     const info = await smtpTransporter.sendMail({ from: fromAddress, to, subject, html });
 
     const testMessageUrl = nodemailer.getTestMessageUrl(info);
