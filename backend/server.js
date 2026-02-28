@@ -114,6 +114,66 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── TEMPORARY: Email diagnostic endpoint ─────────────────────────
+// Bu endpoint sadece debug amaçlıdır ve sonra kaldırılacaktır
+app.get('/api/debug/test-email', async (req, res) => {
+  const targetEmail = req.query.email || 'ferology1317@gmail.com';
+  const nodemailer = require('nodemailer');
+
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      EMAIL_HOST: process.env.EMAIL_HOST || 'NOT SET',
+      EMAIL_PORT: process.env.EMAIL_PORT || 'NOT SET',
+      EMAIL_USER: process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '***' : 'NOT SET',
+      EMAIL_PASS: process.env.EMAIL_PASS ? '***SET***' : 'NOT SET',
+      CLIENT_URL: process.env.CLIENT_URL || 'NOT SET',
+    },
+    steps: [],
+  };
+
+  try {
+    // Step 1: Create transporter
+    diagnostics.steps.push('Creating Gmail transporter...');
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+    diagnostics.steps.push('✅ Transporter created');
+
+    // Step 2: Verify connection
+    diagnostics.steps.push('Verifying SMTP connection...');
+    await transporter.verify();
+    diagnostics.steps.push('✅ SMTP connection verified');
+
+    // Step 3: Send test email
+    diagnostics.steps.push(`Sending test email to ${targetEmail}...`);
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: targetEmail,
+      subject: '🔧 MERN App — Render Email Diagnostic Test',
+      html: '<h1>Render Email Test</h1><p>Bu email Render sunucusundan gönderildi. Eğer bunu görüyorsanız, email servisi çalışıyor!</p>',
+    });
+    diagnostics.steps.push(`✅ Email sent! MessageId: ${info.messageId}`);
+    diagnostics.success = true;
+    diagnostics.response = info.response;
+  } catch (error) {
+    diagnostics.steps.push(`❌ FAILED: ${error.message}`);
+    diagnostics.success = false;
+    diagnostics.error = {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+    };
+  }
+
+  res.json(diagnostics);
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
