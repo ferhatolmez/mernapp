@@ -1273,7 +1273,8 @@ textarea:focus {
 /* ─── CHAT ───────────────────────────────────────────────────────── */
 .chat-page {
   display: flex;
-  height: calc(100vh - var(--navbar-h));
+  height: calc(100dvh - var(--navbar-h));
+  position: relative;
   overflow: hidden;
 }
 
@@ -3409,6 +3410,7 @@ textarea:focus {
     transform: translateX(-100%);
     box-shadow: none;
     z-index: 1000;
+    transition: transform var(--transition);
   }
 
   .chat-sidebar.chat-sidebar-open {
