@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
-const fetch = require('node-fetch') || global.fetch; // Use global fetch in Node 18+
+const https = require('https');
 
 let emailProvider = null; // 'proxy' or 'smtp'
 let smtpTransporter = null;
@@ -66,21 +66,37 @@ const sendEmail = async ({ to, subject, html }) => {
       // Vercel Proxy'sine HTTP POST atıyoruz
       const proxyUrl = `${process.env.VERCEL_API_URL}/api/send-email`;
 
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.EMAIL_SECRET}`,
-        },
-        body: JSON.stringify({ to, subject, html }),
+      const payload = JSON.stringify({ to, subject, html });
+
+      const data = await new Promise((resolve, reject) => {
+        const req = https.request(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.EMAIL_SECRET}`,
+            'Content-Length': Buffer.byteLength(payload)
+          }
+        }, (res) => {
+          let body = '';
+          res.on('data', chunk => body += chunk);
+          res.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              if (res.statusCode >= 200 && res.statusCode < 300 && parsed.success) {
+                resolve(parsed);
+              } else {
+                reject(new Error(parsed.message || `Proxy error: ${res.statusCode}`));
+              }
+            } catch (e) {
+              reject(new Error(`Invalid JSON from proxy: ${body}`));
+            }
+          });
+        });
+
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
       });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        logger.error(`Vercel Proxy Hatası (${response.status}):`, data);
-        throw new Error(data.message || 'E-posta proxy sunucu tarafından reddedildi');
-      }
 
       logger.info(`📧 Email gönderildi [Proxy]: ${to} (ID: ${data.messageId})`);
       return data;
