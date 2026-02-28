@@ -25,6 +25,7 @@ const Chat = () => {
   // Mesaj düzenleme
   const [editingMsg, setEditingMsg] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [activeMessageId, setActiveMessageId] = useState(null);
 
   // Dosya Yükleme
   const [selectedFile, setSelectedFile] = useState(null);
@@ -471,7 +472,10 @@ const Chat = () => {
               <div className="chat-room-info">
                 <button
                   className="hidden-desktop"
-                  onClick={() => setShowSidebar(true)}
+                  onClick={() => {
+                    setSelectedChat(null);
+                    setShowSidebar(true);
+                  }}
                   style={{
                     marginRight: '12px',
                     fontSize: '1.4rem',
@@ -540,7 +544,10 @@ const Chat = () => {
                         />
                       )}
 
-                      <div className="message-bubble">
+                      <div
+                        className="message-bubble"
+                        onClick={() => isOwn && setActiveMessageId(prev => prev === msg._id ? null : msg._id)}
+                      >
                         {!isOwn && (
                           <div className="message-sender">
                             <span className="sender-name">{msg.sender?.name}</span>
@@ -587,7 +594,7 @@ const Chat = () => {
 
                         {/* Mesaj aksiyonları */}
                         {!msg.isDeleted && isOwn && !editingMsg && (
-                          <div className="message-actions">
+                          <div className={`message-actions ${activeMessageId === msg._id ? 'active' : ''}`}>
                             <button
                               onClick={() => { setEditingMsg(msg); setEditContent(msg.content); }}
                               className="message-action-btn"

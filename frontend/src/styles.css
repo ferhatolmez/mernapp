@@ -3404,10 +3404,10 @@ textarea:focus {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 85%;
-    max-width: 360px;
+    width: 100%;
+    max-width: 100%;
     transform: translateX(-100%);
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
     z-index: 1000;
   }
 
