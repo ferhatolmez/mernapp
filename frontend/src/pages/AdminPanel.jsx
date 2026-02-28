@@ -164,10 +164,10 @@ const AdminPanel = () => {
             <thead>
               <tr>
                 <th>Kullanıcı</th>
-                <th>Email</th>
+                <th className="hide-mobile">Email</th>
                 <th>Rol</th>
-                <th>Durum</th>
-                <th>Katılım</th>
+                <th className="hide-mobile">Durum</th>
+                <th className="hide-mobile">Katılım</th>
                 <th>İşlemler</th>
               </tr>
             </thead>
@@ -184,7 +184,7 @@ const AdminPanel = () => {
                       <span>{u.name}</span>
                     </div>
                   </td>
-                  <td className="text-muted">{u.email}</td>
+                  <td className="text-muted hide-mobile">{u.email}</td>
                   <td>
                     {isModerator ? (
                       <select
@@ -202,12 +202,12 @@ const AdminPanel = () => {
                       <span className={`role-badge role-${u.role}`}>{u.role}</span>
                     )}
                   </td>
-                  <td>
+                  <td className="hide-mobile">
                     <span className={`status-badge ${u.isActive ? 'status-active' : 'status-inactive'}`}>
                       {u.isActive ? '● Aktif' : '○ Pasif'}
                     </span>
                   </td>
-                  <td className="text-muted text-sm">
+                  <td className="text-muted text-sm hide-mobile">
                     {new Date(u.createdAt).toLocaleDateString('tr-TR')}
                   </td>
                   <td>

@@ -508,6 +508,16 @@ select {
   margin-bottom: 28px;
   border-bottom: 2px solid var(--border);
   padding-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.dashboard-tabs::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari/Opera */
 }
 
 .tab-btn {
@@ -1174,6 +1184,7 @@ textarea:focus {
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-form {
@@ -1910,6 +1921,16 @@ textarea:focus {
     font-size: 0.8rem;
   }
 
+  .data-table th,
+  .data-table td {
+    padding: 12px 10px;
+  }
+
+  /* Hide less important columns on mobile if they have the hide-mobile class */
+  .hide-mobile {
+    display: none !important;
+  }
+
   .notification-dropdown {
     width: 300px;
     right: -60px;
@@ -2082,6 +2103,40 @@ textarea:focus {
   .data-table th,
   .data-table td {
     white-space: nowrap;
+    padding: 10px 8px;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-form {
+    width: 100%;
+  }
+
+  .role-select {
+    width: 100%;
+  }
+
+  .dashboard-tabs {
+    gap: 2px;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-stats {
+    width: 100%;
   }
 }
 

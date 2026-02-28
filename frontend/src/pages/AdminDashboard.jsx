@@ -207,10 +207,10 @@ const AdminDashboard = () => {
             <thead>
               <tr>
                 <th>Kullanıcı</th>
-                <th>Email</th>
+                <th className="hide-mobile">Email</th>
                 <th>Rol</th>
-                <th>Durum</th>
-                <th>Tarih</th>
+                <th className="hide-mobile">Durum</th>
+                <th className="hide-mobile">Tarih</th>
               </tr>
             </thead>
             <tbody>
@@ -230,10 +230,10 @@ const AdminDashboard = () => {
                       <span>{u.name}</span>
                     </div>
                   </td>
-                  <td className="text-muted">{u.email}</td>
+                  <td className="text-muted hide-mobile">{u.email}</td>
                   <td><span className={`role-badge role-${u.role}`}>{u.role}</span></td>
-                  <td><span className={u.isActive ? 'status-active' : 'status-inactive'}>{u.isActive ? '● Aktif' : '○ Pasif'}</span></td>
-                  <td className="text-muted text-sm">{new Date(u.createdAt).toLocaleDateString('tr-TR')}</td>
+                  <td className="hide-mobile"><span className={u.isActive ? 'status-active' : 'status-inactive'}>{u.isActive ? '● Aktif' : '○ Pasif'}</span></td>
+                  <td className="text-muted text-sm hide-mobile">{new Date(u.createdAt).toLocaleDateString('tr-TR')}</td>
                 </tr>
               ))}
             </tbody>
