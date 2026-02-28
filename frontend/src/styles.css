@@ -2444,11 +2444,44 @@ textarea:focus {
   }
 
   .message-bubble {
-    max-width: 80%;
+    max-width: 85%;
   }
 
   .user-details {
     display: none;
+  }
+
+  /* Auth Forms */
+  .auth-card {
+    padding: 32px 24px;
+  }
+
+  .auth-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .auth-logo {
+    font-size: 2rem;
+  }
+
+  /* Headers / Typography */
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Chat Specific */
+  .chat-page {
+    position: relative;
+  }
+
+  /* Responsive Tables */
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .data-table th,
+  .data-table td {
+    white-space: nowrap;
   }
 }
 
@@ -2465,11 +2498,13 @@ textarea:focus {
 
   .toast {
     min-width: unset;
+    width: calc(100vw - 32px);
   }
 
   .notification-dropdown {
     width: calc(100vw - 32px);
-    right: -100px;
+    right: -60px;
+    /* Adjusted to prevent overflow */
   }
 
   .message-bubble {
@@ -2477,6 +2512,80 @@ textarea:focus {
   }
 
   .navbar {
-    padding: 0 12px;
+    padding: 0 16px;
+  }
+
+  /* Core Layout Padding */
+  .page {
+    padding: 16px 12px;
+  }
+
+  .card {
+    padding: 20px 16px;
+  }
+
+  .charts-grid {
+    gap: 16px;
+  }
+
+  .chart-card {
+    padding: 16px;
+  }
+
+  /* Auth Screens */
+  .auth-page {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  .auth-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .auth-logo {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+  }
+
+  /* Chat Adjustments */
+  .chat-header {
+    padding: 12px 16px;
+  }
+
+  .chat-input-area {
+    padding: 12px 14px;
+  }
+
+  .chat-sidebar-open {
+    width: 100vw;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-meta {
+    flex-wrap: wrap;
+  }
+
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  /* Responsive Tables */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th,
+  .data-table td {
+    white-space: nowrap;
   }
 }
