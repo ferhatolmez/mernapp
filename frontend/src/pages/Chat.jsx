@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../context/ToastContext';
 import api from '../utils/api';
+import EmptyState from '../components/EmptyState';
 
 const Chat = () => {
   const { user } = useAuth();
@@ -555,10 +556,11 @@ const Chat = () => {
             {/* MESAJLAR */}
             <div className="messages-container">
               {messages.length === 0 ? (
-                <div className="empty-chat">
-                  <span>💬</span>
-                  <p>Henüz mesaj yok. İlk mesajı siz gönderin!</p>
-                </div>
+                <EmptyState
+                  icon="💬"
+                  title="Mesaj Yok"
+                  description="Henüz mesaj yok. İlk mesajı siz gönderin!"
+                />
               ) : (
                 messages.map((msg) => {
                   const isOwn = isOwnMessage(msg);
@@ -732,17 +734,17 @@ const Chat = () => {
           </>
         ) : (
           /* Sohbet seçilmemiş */
-          <div className="empty-chat" style={{ height: '100%' }}>
-            <span style={{ fontSize: '72px' }}>💬</span>
-            <h2 style={{ marginTop: '16px', fontWeight: 800 }}>Sohbet</h2>
-            <p style={{ maxWidth: '300px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-              Sol panelden bir kişi arayarak veya mevcut bir sohbete tıklayarak mesajlaşmaya başlayın.
-            </p>
+          <div className="empty-chat" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <EmptyState
+              icon="💬"
+              title="Sohbet"
+              description="Sol panelden bir kişi arayarak veya mevcut bir sohbete tıklayarak mesajlaşmaya başlayın."
+            />
             <button
               className="hidden-desktop"
               onClick={() => setShowSidebar(true)}
               style={{
-                marginTop: '20px',
+                marginTop: '-10px',
                 padding: '12px 24px',
                 borderRadius: '24px',
                 background: 'var(--gradient-primary)',
