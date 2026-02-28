@@ -32,7 +32,7 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
   --skeleton-base: #1c1b28;
   --skeleton-shine: #282738;
-  --chat-own-bg: linear-gradient(135deg, #f97316, #d95e0e);
+  --chat-own-bg: linear-gradient(135deg, #7c3aed, #5b21b6);
   --chat-other-bg: var(--bg-elevated);
 }
 
@@ -3122,15 +3122,15 @@ textarea:focus {
 /* ─── MESAJ AKSİYONLARI ─────────────────────────────────────── */
 .message-actions {
   position: absolute;
-  top: -12px;
+  top: -8px;
   right: 4px;
   display: none;
-  gap: 6px;
+  gap: 2px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 4px;
-  box-shadow: var(--shadow-lg);
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: var(--shadow-md);
   z-index: 20;
 }
 
@@ -3139,7 +3139,7 @@ textarea:focus {
   .message-actions {
     display: flex;
     top: auto;
-    bottom: -16px;
+    bottom: -12px;
     right: 8px;
     opacity: 0.9;
   }
@@ -3150,21 +3150,16 @@ textarea:focus {
 }
 
 .message-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
   background: transparent;
-  transition: all var(--transition);
+  transition: background var(--transition);
   cursor: pointer;
 }
 
 .message-action-btn:hover {
   background: var(--bg-hover);
-  transform: scale(1.1);
 }
 
 .message-edit-form {

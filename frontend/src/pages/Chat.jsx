@@ -470,11 +470,23 @@ const Chat = () => {
             <div className="chat-header">
               <div className="chat-room-info">
                 <button
-                  className="hidden-desktop btn-text"
+                  className="hidden-desktop"
                   onClick={() => setShowSidebar(true)}
-                  style={{ marginRight: '10px', fontSize: '20px' }}
+                  style={{
+                    marginRight: '12px',
+                    fontSize: '1.4rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px',
+                    cursor: 'pointer'
+                  }}
+                  title="Sohbet Listesine Dön"
                 >
-                  ☰
+                  ←
                 </button>
                 {getChatAvatar(selectedChat) ? (
                   <img
