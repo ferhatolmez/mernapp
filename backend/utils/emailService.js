@@ -68,6 +68,8 @@ const sendEmail = async ({ to, subject, html }) => {
 
       const payload = JSON.stringify({ to, subject, html });
 
+      logger.debug(`📧 Proxy URL: ${proxyUrl}`);
+
       const data = await new Promise((resolve, reject) => {
         const req = https.request(proxyUrl, {
           method: 'POST',
@@ -80,20 +82,24 @@ const sendEmail = async ({ to, subject, html }) => {
           let body = '';
           res.on('data', chunk => body += chunk);
           res.on('end', () => {
+            logger.debug(`📧 Proxy yanıtı [${res.statusCode}]: ${body}`);
             try {
               const parsed = JSON.parse(body);
               if (res.statusCode >= 200 && res.statusCode < 300 && parsed.success) {
                 resolve(parsed);
               } else {
-                reject(new Error(parsed.message || `Proxy error: ${res.statusCode}`));
+                reject(new Error(`Proxy error (${res.statusCode}): ${parsed.message || body}`));
               }
             } catch (e) {
-              reject(new Error(`Invalid JSON from proxy: ${body}`));
+              reject(new Error(`Invalid JSON from proxy (${res.statusCode}): ${body}`));
             }
           });
         });
 
-        req.on('error', reject);
+        req.on('error', (err) => {
+          logger.error(`📧 Proxy bağlantı hatası: ${err.message}`);
+          reject(err);
+        });
         req.write(payload);
         req.end();
       });

@@ -1,12 +1,21 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     // Sadece POST isteklerini kabul et
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, message: 'Method Not Allowed' });
     }
 
-    // Güvenlik anahtarı kontrolü (Sadece yetkili backend kullanabilsin diye)
+    // Güvenlik anahtarı kontrolü
     const authHeader = req.headers.authorization;
     if (!process.env.EMAIL_SECRET || authHeader !== `Bearer ${process.env.EMAIL_SECRET}`) {
         return res.status(401).json({ success: false, message: 'Unauthorized / Missing EMAIL_SECRET' });
@@ -18,13 +27,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
+    // Environment variable kontrolü
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+        console.error('GMAIL_USER or GMAIL_PASS environment variables are not set on Vercel!');
+        return res.status(500).json({
+            success: false,
+            message: 'Email configuration error: GMAIL_USER or GMAIL_PASS not set',
+        });
+    }
+
     try {
-        // Gmail transporter oluştur
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_PASS, // Gmail App Password
+                pass: process.env.GMAIL_PASS,
             },
         });
 
@@ -35,9 +52,10 @@ export default async function handler(req, res) {
             html,
         });
 
+        console.log(`Email sent successfully to: ${to}, messageId: ${info.messageId}`);
         return res.status(200).json({ success: true, messageId: info.messageId });
     } catch (error) {
-        console.error('Email Proxy Error:', error);
+        console.error('Email Proxy Error:', error.message, error.stack);
         return res.status(500).json({ success: false, message: error.message });
     }
 }
