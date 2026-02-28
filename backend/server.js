@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
 const dotenv = require('dotenv');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
@@ -79,6 +80,7 @@ app.use(express.json({ limit: '10mb' })); // Dosya upload'ları için artırıld
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
+app.use(xss()); // XSS Koruması
 app.use(compression());
 
 // Loglama — Winston + Morgan
