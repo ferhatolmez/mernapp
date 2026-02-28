@@ -11,6 +11,7 @@ import { PrivateRoute, RoleRoute } from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 
 // Lazy-loaded pages (code splitting)
 const Login = lazy(() => import('./pages/Login'));
@@ -103,6 +104,7 @@ const AppLayout = () => {
         <Outlet />
       </main>
       <BottomNav />
+      <PwaInstallPrompt />
     </>
   );
 };
