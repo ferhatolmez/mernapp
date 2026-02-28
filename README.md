@@ -28,15 +28,20 @@ Bu proje, **MongoDB, Express.js, React ve Node.js (MERN)** teknolojileriyle inş
 - **Akıllı Yazıyor Bildirimi:** Karşı tarafın mesaj yazdığını gösteren dinamik "*Yazıyor...*" efekti.
 - **Çoklu Medya Paylaşımı:** Mesajların yanında resim, doküman veya arşiv (zip/rar) dosyaları gönderebilme altyapısı (Cloudinary & Multer Entegrasyonu).
 
-### 🎨 Modern ve Tam Responsive Arayüz
-- **Pürüzsüz Deneyim:** Tamamen cihaz boyutlarına duyarlı "Mobile-First" yaklaşımı. Telefon ekranlarında kusursuz sayfa navigasyonu.
+### 📱 Gelişmiş Mobil Deneyim (PWA & Responsiveness)
+- **PWA (Progressive Web App):** Uygulama, cihaz ayrımı gözetmeksizin tarayıcıdan cihaza yüklenebilir (Installable). Safari (iOS) özel yönlendirmeleri ve Android için tam destek eklidir.
+- **Mobile Bottom Navigation:** Sadece mobilde görünen, *Glassmorphism* efektli şık bir mobil navigasyon menüsü harika bir UX sağlar.
+- **Pürüzsüz Deneyim:** Tamamen cihaz boyutlarına duyarlı "Mobile-First" yaklaşımı. iOS Safari "çentik (notch)" ve adres çubuğu çakışmalarına karşı `safe-area-inset` ve `100dvh` optimizasyonları yapılmıştır.
+
+### 🎨 Modern UI ve UX Mimari (Code Splitting)
+- **Yüksek Performans:** React tarafında uygulanan `React.lazy` ve `Suspense` özellikleri (Code Splitting) devasa paket boyutlarını böler; ilk açılış hızını zirveye taşır.
 - **Premium Temalar:** Soft "Mor ve Turuncu" gradient paletleriyle harmanlanmış Göz Yormayan Karanlık Mod (Dark Mode) / Aydınlık Mod (Light Mode) seçenekleri.
-- **Etkileşimli UI:** Hover animasyonları, skeleton (iskelet) yükleme ekranları ve gelişmiş "Toast" bildirimleriyle zengin bir deneyim.
+- **Etkileşimli UI:** Hover animasyonları, gelişmiş "Toast" bildirimleri, ve hiç mesajlaşılmamış sayfalardaki (Empty State) özel grafik tasarımları ile zengin bir deneyim.
 
 ### 🛡️ İleri Düzey Güvenlik (Security First)
 - **JWT & Refresh Token:** Kullanıcıların hesaplarına erişimi en güvenli şekilde yönetmek için kısa ömürlü ve uzun ömürlü token yapıları.
 - **İki Aşamalı Doğrulama (2FA):** Google Authenticator (veya Authy) üzerinden taranabilen QR Kod ile ek güvenlik katmanı.
-- **Email Doğrulama & Şifre Yenileme:** Kayıt sonrası e-posta aktivasyonu ve şifresini unutan kullanıcılar için tek seferlik güvenli link (Nodemailer) gönderimi.
+- **Email Doğrulama & Şifre Yenileme:** Kayıt sonrası e-posta aktivasyonu ve şifresini unutan kullanıcılar için tek seferlik güvenli link (Nodemailer) gönderimi. Serverless ortamında (Vercel vb.) kesintisiz çalışma optimizasyonu.
 - **Gelişmiş Önlemler:** API istek sınırlaması (Rate Limiter), güvenlik başlıkları (Helmet) ve CORS koruması.
 
 ### 📊 Rol Tabanlı Yönetim (Admin Dashboard)
@@ -48,7 +53,7 @@ Bu proje, **MongoDB, Express.js, React ve Node.js (MERN)** teknolojileriyle inş
 ## 🛠️ Mimari & Teknoloji Yığını (Tech Stack)
 
 ### Frontend (Kullanıcı Arayüzü)
-- React (Hooks Context API)
+- React (Hooks Context API, Suspense, Lazy Routing)
 - Socket.io-Client (Canlı veri akışı)
 - React-Router-Dom (SPA yönlendirmeleri)
 - Axois (HTTP istekleri)
@@ -183,3 +188,5 @@ Projenin temel mimari dizini aşağıdakine benzer bir pattern kullanır:
 <div align="center">
   <p>Tasarımsal İyileştirmeler ve Geliştirmeler ile sürekli güncellenmektedir.</p>
 </div>
+
+
