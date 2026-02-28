@@ -2383,6 +2383,15 @@ textarea:focus {
   font-family: var(--font-mono);
 }
 
+/* ─── MOBILE CHAT HELPERS ────────────────────────────────────────── */
+.mobile-chat-room-hint {
+  display: none;
+}
+
+.hidden-desktop {
+  display: none !important;
+}
+
 /* ─── RESPONSIVE ──────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .chat-sidebar {
@@ -2472,6 +2481,24 @@ textarea:focus {
   /* Chat Specific */
   .chat-page {
     position: relative;
+  }
+
+  /* Sohbet kısmındaki (alttaki) navbarı mobilde tamamen kaldır */
+  .chat-header {
+    display: none !important;
+  }
+
+  /* Masaüstünde gizli, mobilde görünür öğeler */
+  .hidden-desktop {
+    display: flex !important;
+  }
+
+  .mobile-chat-room-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
   }
 
   /* Responsive Tables */

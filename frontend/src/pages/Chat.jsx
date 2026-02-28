@@ -311,6 +311,7 @@ const Chat = () => {
         <div className="sidebar-section">
           <div className="sidebar-header">
             <h3>Odalar</h3>
+            <button className="hidden-desktop btn-text" onClick={() => setShowSidebar(false)} style={{ fontSize: '1.2rem' }}>✕</button>
           </div>
           <div className="room-list">
             {rooms.map((room) => (
@@ -379,11 +380,6 @@ const Chat = () => {
           </div>
         </div>
       </div>
-
-      {/* Mobil sidebar toggle */}
-      <button className="chat-sidebar-toggle" onClick={() => setShowSidebar(!showSidebar)}>
-        {showSidebar ? '✕' : '☰'}
-      </button>
 
       {/* ─── Ana chat alanı ─── */}
       <div className="chat-main">
@@ -545,7 +541,18 @@ const Chat = () => {
 
         {/* Input alanı */}
         <div className="chat-input-area">
+          <div className="mobile-chat-room-hint hidden-desktop">
+            Şu an <strong>{currentRoomData?.icon || '#'} {currentRoom}</strong> odasındasınız
+            <span className={isConnected ? 'text-green' : 'text-red'}> • {isConnected ? 'Bağlı' : 'Bağlanıyor'}</span>
+          </div>
           <div className="chat-input-wrapper">
+            <button
+              className="chat-sidebar-toggle-inline hidden-desktop"
+              onClick={() => setShowSidebar(true)}
+              title="Odaları Göster"
+            >
+              ☰
+            </button>
             <input
               type="file"
               ref={fileInputRef}
