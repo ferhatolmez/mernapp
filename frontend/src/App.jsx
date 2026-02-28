@@ -67,7 +67,7 @@ const AnimatedRoutes = () => {
             </RoleRoute>
           } />
           <Route path="/dashboard/admin" element={
-            <RoleRoute roles={['admin', 'moderator']}>
+            <RoleRoute roles={['admin']}>
               <AnimatedPage><AdminDashboard /></AnimatedPage>
             </RoleRoute>
           } />

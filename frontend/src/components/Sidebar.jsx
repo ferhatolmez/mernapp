@@ -15,10 +15,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     ];
 
     if (isModerator) {
-        links.push(
-            { path: '/admin', icon: '⚙️', label: 'Kullanıcılar' },
-            { path: '/dashboard/admin', icon: '📊', label: 'Admin Dashboard' }
-        );
+        links.push({ path: '/admin', icon: '⚙️', label: 'Kullanıcılar' });
+    }
+
+    if (isAdmin) {
+        links.push({ path: '/dashboard/admin', icon: '📊', label: 'Admin Dashboard' });
     }
 
     return (
