@@ -1378,25 +1378,6 @@ textarea:focus {
   text-align: center;
 }
 
-/* ─── DEMO ────────────────────────────────────────────────────────── */
-.demo-accounts {
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
-  margin-top: 4px;
-  text-align: center;
-}
-
-.demo-title {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-}
-
-.demo-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
 
 /* ─── LOADING ─────────────────────────────────────────────────────── */
 .loading-screen {

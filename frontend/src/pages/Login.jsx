@@ -49,14 +49,6 @@ const Login = () => {
     setIsSubmitting(false);
   };
 
-  const fillDemo = (role) => {
-    const demos = {
-      admin: { email: 'admin@demo.com', password: 'Admin123!' },
-      user: { email: 'user@demo.com', password: 'User123!' },
-    };
-    setFormData(demos[role]);
-    toast.info(`${role} bilgileri dolduruldu`);
-  };
 
   return (
     <div className="auth-page">
@@ -125,13 +117,6 @@ const Login = () => {
 
         {!requires2FA && (
           <>
-            <div className="demo-accounts">
-              <p className="demo-title">Demo Hesaplar:</p>
-              <div className="demo-buttons">
-                <button onClick={() => fillDemo('admin')} className="btn btn-ghost btn-sm">👑 Admin</button>
-                <button onClick={() => fillDemo('user')} className="btn btn-ghost btn-sm">👤 Kullanıcı</button>
-              </div>
-            </div>
 
             <div className="auth-footer">
               <p>Hesabınız yok mu? <Link to="/register" className="auth-link">Kayıt Olun</Link></p>

@@ -156,7 +156,28 @@ cd frontend
 npm start
 ``` 
 
-Uygulamanız varsayılan olarak **http://localhost:3000** adresinde hizmet vermeye başlayacaktır.
+Uygulamanız varsayılan olarak **http://localhost:5173** (Frontend) ve **http://localhost:5000** (Backend) adreslerinde hizmet vermeye başlayacaktır.
+
+---
+
+## 🛠️ İlk Adımlar & Geliştirici Rehberi
+
+Proje üzerinde çalışmaya başlamak için demo hesaplar güvenlik ve profesyonellik gerekçesiyle kaldırılmıştır. Kendi test ortamınızı kurmak için şu adımları izleyin:
+
+### 1️⃣ İlk Admin Hesabını Oluşturma
+Uygulamada varsayılan bir admin bulunmaz. İlk admini şu şekilde tanımlayabilirsiniz:
+1.  Frontend arayüzünden (`/register`) yeni bir hesap oluşturun.
+2.  MongoDB veritabanınıza bağlanın (Compass veya Shell kullanarak).
+3.  `users` koleksiyonunda yeni oluşturduğunuz kaydı bulun.
+4.  `role` alanını `"user"` yerine `"admin"` (veya yetkili başka bir rol) olarak güncelleyin.
+5.  Artık bu hesapla giriş yaparak **Yönetici Paneli**'ne erişebilirsiniz.
+
+### 2️⃣ Test Senaryoları & Yol Haritası
+Projeyi keşfetmek için şu özellikleri test ederek başlayabilirsiniz:
+-   **Anlık Mesajlaşma:** İki farklı tarayıcıdan farklı hesaplarla girerek Socket.io tabanlı sohbeti deneyimleyin.
+-   **Profil Yönetimi:** Avatar yükleme (Cloudinary) ve 2FA (İki Faktörlü Doğrulama) özelliklerini aktif edin.
+-   **Yönetim Paneli:** Diğer kullanıcıları yönetme, banlama ve istatistikleri inceleme süreçlerini kontrol edin.
+-   **PWA Desteği:** Tarayıcınızın "Yükle" (Install) özelliğini kullanarak uygulamanın mobil uyumlu yapısını test edin.
 
 ---
 
