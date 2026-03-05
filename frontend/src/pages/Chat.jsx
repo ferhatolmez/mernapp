@@ -1,4 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  MessageSquare,
+  Send,
+  Paperclip,
+  Search,
+  X,
+  User,
+  ArrowLeft,
+  Edit2,
+  Trash2,
+  Check,
+  Hash
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../context/ToastContext';
@@ -350,8 +363,8 @@ const Chat = () => {
   };
 
   const getChatIcon = (roomObj) => {
-    if (roomObj?.type === 'private') return '👤';
-    return roomObj?.icon || '💬';
+    if (roomObj?.type === 'private') return <User size={20} />;
+    return <Hash size={20} />;
   };
 
   const isOwnMessage = (msg) => msg.sender?._id === user._id;
@@ -371,25 +384,27 @@ const Chat = () => {
       <div className={`chat-sidebar ${showSidebar ? 'chat-sidebar-open' : ''}`}>
         <div className="sidebar-section">
           <div className="sidebar-header">
-            <h3>💬 Mesajlar</h3>
+            <h3><MessageSquare size={20} className="nav-icon-inline" /> Mesajlar</h3>
             <button
               className="hidden-desktop btn-text"
               onClick={() => setShowSidebar(false)}
-              style={{ fontSize: '1.2rem' }}
             >
-              ✕
+              <X size={20} />
             </button>
           </div>
 
           {/* Kullanıcı Arama */}
           <div className="search-section" style={{ marginBottom: '12px' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchUser}
-              placeholder="🔍 Kişi ara..."
-              className="search-input"
-            />
+            <div className="search-input-wrapper">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchUser}
+                placeholder="Kişi ara..."
+                className="search-input"
+              />
+            </div>
             {searchQuery && (
               <div className="search-history" style={{ maxHeight: '180px', overflowY: 'auto' }}>
                 {isSearching ? (
@@ -523,9 +538,7 @@ const Chat = () => {
                   }}
                   title="Sohbet Listesine Dön"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                  </svg>
+                  <ArrowLeft size={20} />
                 </button>
                 {getChatAvatar(selectedChat) ? (
                   <img
@@ -557,7 +570,7 @@ const Chat = () => {
             <div className="messages-container">
               {messages.length === 0 ? (
                 <EmptyState
-                  icon="💬"
+                  icon={MessageSquare}
                   title="Mesaj Yok"
                   description="Henüz mesaj yok. İlk mesajı siz gönderin!"
                 />
@@ -604,8 +617,8 @@ const Chat = () => {
                               autoFocus
                             />
                             <div className="message-edit-actions">
-                              <button onClick={handleEditMessage} className="btn-text">✓</button>
-                              <button onClick={() => { setEditingMsg(null); setEditContent(''); }} className="btn-text">✕</button>
+                              <button onClick={handleEditMessage} className="btn-text"><Check size={16} /></button>
+                              <button onClick={() => { setEditingMsg(null); setEditContent(''); }} className="btn-text"><X size={16} /></button>
                             </div>
                           </div>
                         ) : (
@@ -615,7 +628,7 @@ const Chat = () => {
                               <img src={msg.fileUrl} alt="" className="message-image" />
                             ) : msg.type === 'file' && msg.fileUrl && !msg.isDeleted ? (
                               <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="message-file">
-                                📎 {msg.fileName}
+                                <Paperclip size={16} /> {msg.fileName}
                               </a>
                             ) : (
                               <div className="message-content">{msg.content}</div>
@@ -635,12 +648,12 @@ const Chat = () => {
                               onClick={() => { setEditingMsg(msg); setEditContent(msg.content); }}
                               className="message-action-btn"
                               title="Düzenle"
-                            >✏️</button>
+                            ><Edit2 size={14} /></button>
                             <button
                               onClick={() => handleDeleteMessage(msg._id)}
                               className="message-action-btn"
                               title="Sil"
-                            >🗑️</button>
+                            ><Trash2 size={14} /></button>
                           </div>
                         )}
                         {!msg.isDeleted && !isOwn && ['admin', 'moderator'].includes(user.role) && (
@@ -649,7 +662,7 @@ const Chat = () => {
                               onClick={() => handleDeleteMessage(msg._id)}
                               className="message-action-btn"
                               title="Sil (Moderatör)"
-                            >🗑️</button>
+                            ><Trash2 size={14} /></button>
                           </div>
                         )}
                       </div>
@@ -675,12 +688,12 @@ const Chat = () => {
             {/* DOSYA ÖNİZLEME */}
             {selectedFile && (
               <div className="file-preview">
-                <span className="file-preview-name">📎 {selectedFile.name}</span>
+                <span className="file-preview-name"><Paperclip size={14} /> {selectedFile.name}</span>
                 <span className="file-preview-size">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
                 <button
                   onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                   className="file-preview-remove"
-                >✕</button>
+                ><X size={14} /></button>
                 <button onClick={handleFileUpload} disabled={isUploading} className="send-btn" style={{ width: 'auto', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem' }}>
                   {isUploading ? 'Yükleniyor...' : 'Gönder'}
                 </button>
@@ -703,7 +716,7 @@ const Chat = () => {
                   title="Dosya gönder"
                   disabled={!socketConnected}
                 >
-                  📎
+                  <Paperclip size={20} />
                 </button>
                 <textarea
                   ref={inputRef}
@@ -723,7 +736,7 @@ const Chat = () => {
                     disabled={!newMessage.trim() || !socketConnected}
                     className="send-btn"
                   >
-                    ➤
+                    <Send size={18} />
                   </button>
                 </div>
               </div>
@@ -736,7 +749,7 @@ const Chat = () => {
           /* Sohbet seçilmemiş */
           <div className="empty-chat" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <EmptyState
-              icon="💬"
+              icon={MessageSquare}
               title="Sohbet"
               description="Sol panelden bir kişi arayarak veya mevcut bir sohbete tıklayarak mesajlaşmaya başlayın."
             />

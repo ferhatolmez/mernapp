@@ -1,14 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
+import {
+    Bell,
+    BellOff,
+    MessageSquare,
+    Settings,
+    AtSign,
+    PartyPopper,
+    Crown,
+    Key,
+    Lock,
+    X,
+    ClipboardList
+} from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 
 const ICONS = {
-    message: '💬',
-    system: '⚙️',
-    mention: '@',
-    welcome: '🎉',
-    role_change: '👑',
-    login: '🔑',
-    security: '🔐',
+    message: <MessageSquare size={16} />,
+    system: <Settings size={16} />,
+    mention: <AtSign size={16} />,
+    welcome: <PartyPopper size={16} />,
+    role_change: <Crown size={16} />,
+    login: <Key size={16} />,
+    security: <Lock size={16} />,
 };
 
 const NotificationBell = () => {
@@ -53,7 +66,7 @@ const NotificationBell = () => {
                 onClick={() => setIsOpen(!isOpen)}
                 title="Bildirimler"
             >
-                🔔
+                <Bell size={20} />
                 {unreadCount > 0 && (
                     <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
                 )}
@@ -73,7 +86,7 @@ const NotificationBell = () => {
                     <div className="notification-list">
                         {notifications.length === 0 ? (
                             <div className="notification-empty">
-                                <span>🔕</span>
+                                <BellOff size={32} className="text-muted" />
                                 <p>Bildirim yok</p>
                             </div>
                         ) : (
@@ -85,7 +98,7 @@ const NotificationBell = () => {
                                         if (!n.isRead) markAsRead(n._id);
                                     }}
                                 >
-                                    <span className="notification-icon">{ICONS[n.type] || '📋'}</span>
+                                    <span className="notification-icon">{ICONS[n.type] || <ClipboardList size={16} />}</span>
                                     <div className="notification-content">
                                         <p className="notification-title">{n.title}</p>
                                         <p className="notification-message">{n.message}</p>
@@ -98,7 +111,7 @@ const NotificationBell = () => {
                                             deleteNotification(n._id);
                                         }}
                                     >
-                                        ×
+                                        <X size={14} />
                                     </button>
                                 </div>
                             ))

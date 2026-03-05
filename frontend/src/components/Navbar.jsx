@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Zap,
+  Home,
+  MessageSquare,
+  Users,
+  BarChart3,
+  Sun,
+  Moon,
+  User,
+  LogOut,
+  ChevronUp,
+  ChevronDown
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -41,7 +54,7 @@ const Navbar = ({ onMenuToggle }) => {
 
       <div className="navbar-brand">
         <Link to="/dashboard">
-          <span className="brand-icon">⚡</span>
+          <span className="brand-icon"><Zap size={20} fill="currentColor" /></span>
           <span className="brand-name">MERN App</span>
         </Link>
       </div>
@@ -49,18 +62,18 @@ const Navbar = ({ onMenuToggle }) => {
       {/* Desktop Links */}
       <div className="navbar-links">
         <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}>
-          🏠 Dashboard
+          <Home size={18} className="nav-icon-inline" /> Dashboard
         </Link>
         <Link to="/chat" className={`nav-link ${isActive('/chat') ? 'active' : ''}`}>
-          💬 Chat
+          <MessageSquare size={18} className="nav-icon-inline" /> Chat
         </Link>
         {isModerator && (
           <>
             <Link to="/admin" className={`nav-link ${isActive('/admin') ? 'active' : ''}`}>
-              ⚙️ Kullanıcılar
+              <Users size={18} className="nav-icon-inline" /> Kullanıcılar
             </Link>
             <Link to="/dashboard/admin" className={`nav-link ${isActive('/dashboard/admin') ? 'active' : ''}`}>
-              📊 Dashboard
+              <BarChart3 size={18} className="nav-icon-inline" /> Dashboard
             </Link>
           </>
         )}
@@ -73,7 +86,7 @@ const Navbar = ({ onMenuToggle }) => {
           className="theme-toggle"
           title={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
         >
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
         {/* Bildirimler */}
@@ -86,16 +99,18 @@ const Navbar = ({ onMenuToggle }) => {
             <span className="user-name">{user?.name}</span>
             <span className={`role-badge role-${user?.role}`}>{user?.role}</span>
           </div>
-          <span className="dropdown-arrow">{menuOpen ? '▴' : '▾'}</span>
+          <span className="dropdown-arrow">
+            {menuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </span>
 
           {menuOpen && (
             <div className="dropdown-menu">
               <Link to="/profile" className="dropdown-item" onClick={() => setMenuOpen(false)}>
-                👤 Profilim
+                <User size={16} className="dropdown-icon" /> Profilim
               </Link>
               <div className="dropdown-divider" />
               <button onClick={handleLogout} className="dropdown-item dropdown-item-danger">
-                🚪 Çıkış Yap
+                <LogOut size={16} className="dropdown-icon" /> Çıkış Yap
               </button>
             </div>
           )}

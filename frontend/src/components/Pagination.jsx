@@ -1,4 +1,10 @@
 import React, { useMemo } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
+} from 'lucide-react';
 
 // ─── Pagination bileşeni ──────────────────────────────────────────
 // useMemo kullanımı örneği: sayfa numaralarını hesaplamak için
@@ -42,7 +48,7 @@ const Pagination = ({ pagination, onPageChange }) => {
           disabled={!hasPrevPage}
           title="İlk sayfa"
         >
-          «
+          <ChevronsLeft size={16} />
         </button>
         <button
           className="page-btn"
@@ -50,7 +56,7 @@ const Pagination = ({ pagination, onPageChange }) => {
           disabled={!hasPrevPage}
           title="Önceki sayfa"
         >
-          ‹
+          <ChevronLeft size={16} />
         </button>
 
         {pageNumbers.map((num, idx) =>
@@ -73,7 +79,7 @@ const Pagination = ({ pagination, onPageChange }) => {
           disabled={!hasNextPage}
           title="Sonraki sayfa"
         >
-          ›
+          <ChevronRight size={16} />
         </button>
         <button
           className="page-btn"
@@ -81,7 +87,7 @@ const Pagination = ({ pagination, onPageChange }) => {
           disabled={!hasNextPage}
           title="Son sayfa"
         >
-          »
+          <ChevronsRight size={16} />
         </button>
       </div>
     </div>

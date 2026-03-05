@@ -1,5 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import {
+    Home,
+    MessageSquare,
+    User,
+    Users,
+    BarChart3
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const BottomNav = () => {
@@ -9,17 +16,17 @@ const BottomNav = () => {
     const isActive = (path) => location.pathname === path;
 
     const links = [
-        { path: '/dashboard', icon: '🏠', label: 'Ana Sayfa' },
-        { path: '/chat', icon: '💬', label: 'Chat' },
-        { path: '/profile', icon: '👤', label: 'Profil' },
+        { path: '/dashboard', icon: <Home size={22} />, label: 'Ana Sayfa' },
+        { path: '/chat', icon: <MessageSquare size={22} />, label: 'Chat' },
+        { path: '/profile', icon: <User size={22} />, label: 'Profil' },
     ];
 
     if (isModerator) {
-        links.push({ path: '/admin', icon: '⚙️', label: 'Yönetim' });
+        links.push({ path: '/admin', icon: <Users size={22} />, label: 'Yönetim' });
     }
 
     if (isAdmin) {
-        links.push({ path: '/dashboard/admin', icon: '📊', label: 'Admin' });
+        links.push({ path: '/dashboard/admin', icon: <BarChart3 size={22} />, label: 'Admin' });
     }
 
     return (

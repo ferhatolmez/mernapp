@@ -1,5 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import {
+    Zap,
+    Home,
+    MessageSquare,
+    User,
+    Users,
+    BarChart3,
+    X
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -9,17 +18,17 @@ const Sidebar = ({ isOpen, onClose }) => {
     const isActive = (path) => location.pathname === path;
 
     const links = [
-        { path: '/dashboard', icon: '🏠', label: 'Dashboard' },
-        { path: '/chat', icon: '💬', label: 'Chat' },
-        { path: '/profile', icon: '👤', label: 'Profilim' },
+        { path: '/dashboard', icon: <Home size={20} />, label: 'Dashboard' },
+        { path: '/chat', icon: <MessageSquare size={20} />, label: 'Chat' },
+        { path: '/profile', icon: <User size={20} />, label: 'Profilim' },
     ];
 
     if (isModerator) {
-        links.push({ path: '/admin', icon: '⚙️', label: 'Kullanıcılar' });
+        links.push({ path: '/admin', icon: <Users size={20} />, label: 'Kullanıcılar' });
     }
 
     if (isAdmin) {
-        links.push({ path: '/dashboard/admin', icon: '📊', label: 'Admin Dashboard' });
+        links.push({ path: '/dashboard/admin', icon: <BarChart3 size={20} />, label: 'Admin Dashboard' });
     }
 
     return (
@@ -30,9 +39,9 @@ const Sidebar = ({ isOpen, onClose }) => {
             {/* Sidebar */}
             <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
                 <div className="sidebar-header">
-                    <span className="brand-icon">⚡</span>
+                    <span className="brand-icon"><Zap size={24} fill="currentColor" /></span>
                     <span className="brand-name">MERN App</span>
-                    <button className="sidebar-close" onClick={onClose}>✕</button>
+                    <button className="sidebar-close" onClick={onClose}><X size={24} /></button>
                 </div>
 
                 <nav className="sidebar-nav">

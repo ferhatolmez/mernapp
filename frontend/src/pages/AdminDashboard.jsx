@@ -3,8 +3,19 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import {
+  Users,
+  UserPlus,
+  Crown,
+  CheckCircle2,
+  RefreshCw,
+  BarChart3,
+  ShieldCheck,
+  MessageSquare,
+  Lock,
+  Pencil
+} from 'lucide-react';
 import api from '../utils/api';
-import { SkeletonStat } from '../components/Skeleton';
 import { useToast } from '../context/ToastContext';
 
 // ─── Renkler ─────────────────────────────────────────────────────
@@ -90,11 +101,11 @@ const AdminDashboard = () => {
       {/* ─── Header ─── */}
       <div className="page-header">
         <div>
-          <h1>📊 Dashboard</h1>
+          <h1><BarChart3 size={24} className="nav-icon-inline" /> Dashboard</h1>
           <p className="text-muted">Sistem genel görünümü</p>
         </div>
         <button onClick={fetchData} className="btn btn-outline btn-sm">
-          🔄 Yenile
+          <RefreshCw size={14} className="nav-icon-inline" /> Yenile
         </button>
       </div>
 
@@ -117,13 +128,13 @@ const AdminDashboard = () => {
           {/* Stat Kartları */}
           <div className="stat-cards-grid">
             {isLoading ? (
-              Array(4).fill(0).map((_, i) => <SkeletonStat key={i} />)
+              Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 100, borderRadius: 12 }} />)
             ) : (
               <>
-                <StatCard icon="👥" label="Toplam Kullanıcı" value={stats?.total} change={12} color="#7c6af8" />
-                <StatCard icon="🆕" label="Bugün Yeni" value={stats?.newToday} color="#22c55e" />
-                <StatCard icon="👑" label="Yetkili Sayısı" value={(stats?.byRole?.find(r => r._id === 'admin')?.count || 0) + (stats?.byRole?.find(r => r._id === 'moderator')?.count || 0)} color="#f59e0b" />
-                <StatCard icon="✅" label="Aktif Kullanıcı" value={stats?.byRole?.reduce((a, r) => a + r.activeCount, 0)} color="#06b6d4" />
+                <StatCard icon={<Users size={20} />} label="Toplam Kullanıcı" value={stats?.total} change={12} color="#7c6af8" />
+                <StatCard icon={<UserPlus size={20} />} label="Bugün Yeni" value={stats?.newToday} color="#22c55e" />
+                <StatCard icon={<Crown size={20} />} label="Yetkili Sayısı" value={(stats?.byRole?.find(r => r._id === 'admin')?.count || 0) + (stats?.byRole?.find(r => r._id === 'moderator')?.count || 0)} color="#f59e0b" />
+                <StatCard icon={<CheckCircle2 size={20} />} label="Aktif Kullanıcı" value={stats?.byRole?.reduce((a, r) => a + r.activeCount, 0)} color="#06b6d4" />
               </>
             )}
           </div>
@@ -246,11 +257,11 @@ const AdminDashboard = () => {
         <div className="activity-feed">
           <h3>Son Aktiviteler</h3>
           {[
-            { icon: '👤', text: 'Yeni kullanıcı kaydoldu', time: '2 dakika önce', color: '#7c6af8' },
-            { icon: '🔐', text: 'Admin girişi yapıldı', time: '15 dakika önce', color: '#f59e0b' },
-            { icon: '💬', text: 'Genel odaya 24 mesaj gönderildi', time: '1 saat önce', color: '#22c55e' },
-            { icon: '🔒', text: 'Kullanıcı hesabı pasif edildi', time: '3 saat önce', color: '#ef4444' },
-            { icon: '✏️', text: 'Rol güncellendi: user → moderator', time: '5 saat önce', color: '#06b6d4' },
+            { icon: <Users size={16} />, text: 'Yeni kullanıcı kaydoldu', time: '2 dakika önce', color: '#7c6af8' },
+            { icon: <ShieldCheck size={16} />, text: 'Admin girişi yapıldı', time: '15 dakika önce', color: '#f59e0b' },
+            { icon: <MessageSquare size={16} />, text: 'Genel odaya 24 mesaj gönderildi', time: '1 saat önce', color: '#22c55e' },
+            { icon: <Lock size={16} />, text: 'Kullanıcı hesabı pasif edildi', time: '3 saat önce', color: '#ef4444' },
+            { icon: <Pencil size={16} />, text: 'Rol güncellendi: user → moderator', time: '5 saat önce', color: '#06b6d4' },
           ].map((item, i) => (
             <div key={i} className="activity-item" style={{ '--delay': `${i * 0.08}s` }}>
               <div className="activity-icon" style={{ background: `${item.color}20`, color: item.color }}>

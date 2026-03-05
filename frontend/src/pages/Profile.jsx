@@ -1,4 +1,12 @@
 import React, { useState } from 'react';
+import {
+  User,
+  Camera,
+  CheckCircle2,
+  AlertCircle,
+  Lock,
+  ShieldCheck
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../utils/api';
@@ -154,7 +162,7 @@ const Profile = () => {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>👤 Profilim</h1>
+        <h1><User size={28} className="nav-icon-inline" /> Profilim</h1>
       </div>
 
       <div className="profile-grid">
@@ -163,7 +171,7 @@ const Profile = () => {
           <div className="avatar-upload-container">
             <img src={avatarSrc} alt={user?.name} className="profile-avatar" />
             <label className="avatar-upload-btn" title="Fotoğraf değiştir">
-              📷
+              <Camera size={18} />
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
@@ -187,7 +195,11 @@ const Profile = () => {
           <span className={`role-badge role-${user?.role}`}>{user?.role}</span>
           {user?.isEmailVerified !== undefined && (
             <span className={`verification-badge ${user.isEmailVerified ? 'verified' : 'unverified'}`}>
-              {user.isEmailVerified ? '✅ Email Doğrulandı' : '⚠️ Email Doğrulanmadı'}
+              {user.isEmailVerified ? (
+                <><CheckCircle2 size={14} className="nav-icon-inline" /> Email Doğrulandı</>
+              ) : (
+                <><AlertCircle size={14} className="nav-icon-inline" /> Email Doğrulanmadı</>
+              )}
             </span>
           )}
           <p className="text-muted text-sm mt-2">
@@ -263,7 +275,7 @@ const Profile = () => {
 
           {/* 2FA */}
           <div className="card">
-            <h3>🔐 İki Faktörlü Doğrulama (2FA)</h3>
+            <h3><ShieldCheck size={20} className="nav-icon-inline" /> İki Faktörlü Doğrulama (2FA)</h3>
             <p className="text-muted text-sm" style={{ marginBottom: '16px' }}>
               Google Authenticator veya benzeri bir uygulama ile hesabınızı ekstra güvenceye alın.
             </p>
@@ -271,7 +283,7 @@ const Profile = () => {
             {user?.twoFactorEnabled ? (
               <div>
                 <div className="alert alert-success" style={{ marginBottom: '12px' }}>
-                  ✅ 2FA aktif — Hesabınız ekstra korumalı
+                  <CheckCircle2 size={16} className="nav-icon-inline" /> 2FA aktif — Hesabınız ekstra korumalı
                 </div>
                 <div className="form-group">
                   <label>Devre dışı bırakmak için şifrenizi girin</label>
@@ -315,7 +327,7 @@ const Profile = () => {
               </div>
             ) : (
               <button onClick={handleSetup2FA} className="btn btn-primary" disabled={isSettingUp2FA}>
-                {isSettingUp2FA ? 'Hazırlanıyor...' : '🔐 2FA Etkinleştir'}
+                {isSettingUp2FA ? 'Hazırlanıyor...' : <><Lock size={16} className="nav-icon-inline" /> 2FA Etkinleştir</>}
               </button>
             )}
           </div>

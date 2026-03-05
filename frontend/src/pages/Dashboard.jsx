@@ -1,4 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import {
+  User,
+  Calendar,
+  Lock,
+  CheckCircle2,
+  XCircle,
+  BarChart3,
+  Smile
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -38,7 +47,7 @@ const Dashboard = () => {
         <div className="welcome-section">
           <img src={user?.avatar} alt={user?.name} className="user-avatar-lg" />
           <div>
-            <h1>{greeting}, {user?.name}! 👋</h1>
+            <h1>{greeting}, {user?.name}! <Smile size={28} className="nav-icon-inline" /></h1>
             <p className="text-muted">
               <span className="role-badge" style={{ backgroundColor: roleColor }}>
                 {user?.role}
@@ -52,7 +61,7 @@ const Dashboard = () => {
       {/* Kullanıcı Bilgi Kartları */}
       <div className="cards-grid">
         <div className="card">
-          <div className="card-icon">👤</div>
+          <div className="card-icon"><User size={24} /></div>
           <div className="card-content">
             <h3>Profil Bilgileri</h3>
             <div className="info-list">
@@ -77,7 +86,7 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <div className="card-icon">📅</div>
+          <div className="card-icon"><Calendar size={24} /></div>
           <div className="card-content">
             <h3>Hesap Aktivitesi</h3>
             <div className="info-list">
@@ -98,7 +107,7 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <div className="card-icon">🔐</div>
+          <div className="card-icon"><Lock size={24} /></div>
           <div className="card-content">
             <h3>Yetkileriniz</h3>
             <div className="permissions-list">
@@ -111,7 +120,7 @@ const Dashboard = () => {
               ].map(({ label, allowed }) => (
                 <div key={label} className="permission-item">
                   <span className={allowed ? 'perm-yes' : 'perm-no'}>
-                    {allowed ? '✅' : '❌'}
+                    {allowed ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
                   </span>
                   <span>{label}</span>
                 </div>
@@ -123,7 +132,7 @@ const Dashboard = () => {
         {/* Admin istatistik kartı */}
         {isAdmin && (
           <div className="card card-wide">
-            <div className="card-icon">📊</div>
+            <div className="card-icon"><BarChart3 size={24} /></div>
             <div className="card-content">
               <h3>Sistem İstatistikleri</h3>
               {isLoading ? (
