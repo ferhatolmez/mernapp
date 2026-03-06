@@ -10,12 +10,47 @@ root.render(
   </React.StrictMode>
 );
 
-// PWA Service Worker kaydı
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((reg) => console.log('✅ SW registered:', reg.scope))
-      .catch((err) => console.log('❌ SW registration failed:', err));
+  window.addEventListener('load', async () => {
+    let isRefreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      window.location.reload();
+    });
+
+    try {
+      const reg = await navigator.serviceWorker.register('/service-worker.js');
+
+      const activateWaitingWorker = () => {
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      };
+
+      if (reg.waiting) {
+        activateWaitingWorker();
+      }
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            activateWaitingWorker();
+          }
+        });
+      });
+
+      setInterval(() => {
+        reg.update().catch(() => {});
+      }, 60 * 1000);
+
+      console.log('SW registered:', reg.scope);
+    } catch (err) {
+      console.log('SW registration failed:', err);
+    }
   });
 }

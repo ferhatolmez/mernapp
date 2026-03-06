@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'mern-app-v2';
+const CACHE_NAME = 'mern-app-v3';
 const STATIC_ASSETS = ['/', '/index.html', '/icon-512.png', '/manifest.json'];
 
 const NETWORK_TIMEOUT_MS = 2000;
@@ -39,6 +39,12 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
