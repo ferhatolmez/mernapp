@@ -211,3 +211,47 @@ Projenin temel mimari dizini aşağıdakine benzer bir pattern kullanır:
 </div>
 
 
+
+---
+
+## Son Guncellemeler (2026-03-06)
+
+Bu surumde projeye hem backend guvenligi hem de UX/UI deneyimi acisindan kapsamli iyilestirmeler eklendi.
+
+### Backend Iyilestirmeleri
+- Ortak dogrulama yardimcilari eklendi: `backend/utils/validators.js`
+- Kullanici listesi ve arama endpointlerinde:
+  - Guvenli regex kullanimi
+  - Pagination ve sort whitelist
+  - ID/email/name dogrulama iyilestirmeleri
+- Chat katmaninda:
+  - Private odalara erisim kontrolu sertlestirildi
+  - Mesaj cursor/pagination dogrulamasi eklendi
+  - Oda olusturma kurallari ve mesaj/file validation guclendirildi
+- Auth tarafinda:
+  - Email normalize/sanitize
+  - 2FA kod format dogrulamasi
+  - Refresh cookie ayarlari ortam bazli guvenli hale getirildi
+- Notification endpointlerinde ID ve pagination dogrulamalari eklendi
+- Socket.io katmaninda private oda izin kontrolleri eklendi (join/typing/message akislarinda)
+
+### Frontend UX/UI Iyilestirmeleri
+- Chat sayfasi gelistirildi:
+  - Sohbet listesi ve mesajlar icin yukleniyor/hata/tekrar dene durumlari
+  - Son acilan odanin hatirlanmasi
+  - Mesaj kutusunda auto-resize
+  - Dosya boyutu/tip dogrulama (kullanici geri bildirimi ile)
+- Login sayfasi gelistirildi:
+  - Sifre goster/gizle
+  - 2FA girisinde numeric input deneyimi
+  - Daha net istemci tarafi form dogrulamalari
+- Bildirim altyapisi guclendirildi:
+  - Notification socket baglantisi auth durumuna baglandi
+  - Socket URL ve API URL uyumlulugu iyilestirildi
+  - Dropdown erisilebilirlik/klavye davranislari duzeltildi
+- Stil tarafinda chat hata-bilgi durumlari ve login sifre toggle bileşeni icin yeni CSS yardimcilari eklendi
+
+### Dogrulama
+- Frontend build: `npm.cmd run build` basarili
+- Backend test: `npm.cmd test -- --runInBand` basarili
+

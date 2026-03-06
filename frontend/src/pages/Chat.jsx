@@ -10,13 +10,30 @@ import {
   Edit2,
   Trash2,
   Check,
-  Hash
+  Hash,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../context/ToastContext';
 import api from '../utils/api';
 import EmptyState from '../components/EmptyState';
+
+const MAX_MESSAGE_LENGTH = 1000;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const LAST_CHAT_STORAGE_KEY = 'chat:lastRoomId';
+
+const allowedMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/zip',
+  'application/x-rar-compressed',
+]);
 
 const Chat = () => {
   const { user } = useAuth();
@@ -31,57 +48,117 @@ const Chat = () => {
     setMessages,
     onlineUsers,
   } = useChat();
+
   const toast = useToast();
 
   const [newMessage, setNewMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
 
-  // Mesaj düzenleme
   const [editingMsg, setEditingMsg] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [activeMessageId, setActiveMessageId] = useState(null);
 
-  // Dosya Yükleme
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Kullanıcı Arama
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const [showSidebar, setShowSidebar] = useState(() => window.innerWidth <= 768);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [chatsError, setChatsError] = useState('');
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [messagesError, setMessagesError] = useState('');
+
+  const [showSidebar, setShowSidebar] = useState(() => window.innerWidth > 768);
+
+  const searchTimerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
 
-  // ═══════════════════════════════════════════════════════
-  // 1. SOHBET LİSTESİNİ ÇEK (Genel + Private Odalar)
-  // ═══════════════════════════════════════════════════════
   const fetchChats = useCallback(async () => {
+    setIsLoadingChats(true);
+    setChatsError('');
+
     try {
       const { data } = await api.get('/chat/');
       setChats(data.data.rooms || []);
     } catch (error) {
-      console.error('Sohbetler yüklenemedi:', error);
+      setChatsError('Sohbet listesi yuklenemedi.');
+    } finally {
+      setIsLoadingChats(false);
     }
   }, [setChats]);
+
+  const fetchMessagesForRoom = useCallback(async (roomObj) => {
+    if (!roomObj?.name) return;
+
+    setIsLoadingMessages(true);
+    setMessagesError('');
+
+    try {
+      const { data } = await api.get(`/chat/messages?room=${encodeURIComponent(roomObj.name)}&limit=50`);
+      setMessages(data.data.messages || []);
+    } catch (error) {
+      setMessages([]);
+      setMessagesError('Mesajlar yuklenemedi. Lutfen tekrar deneyin.');
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, [setMessages]);
 
   useEffect(() => {
     fetchChats();
   }, [fetchChats]);
 
-  // Mobil cihazlarda chat açıldığında body scroll'u kapat (Header'ın navbar altına kaçmasını önler)
+  useEffect(() => {
+    if (!selectedChat?._id) return;
+    localStorage.setItem(LAST_CHAT_STORAGE_KEY, selectedChat._id);
+  }, [selectedChat]);
+
+  useEffect(() => {
+    if (!chats.length || selectedChat) return;
+
+    const lastRoomId = localStorage.getItem(LAST_CHAT_STORAGE_KEY);
+    if (!lastRoomId) return;
+
+    const room = chats.find((chatRoom) => chatRoom._id === lastRoomId);
+    if (!room) return;
+
+    setSelectedChat(room);
+    if (socket) {
+      socket.emit('joinRoom', room.name);
+    }
+    fetchMessagesForRoom(room);
+  }, [chats, selectedChat, setSelectedChat, fetchMessagesForRoom, socket]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setShowSidebar(true);
+      } else if (!selectedChat) {
+        setShowSidebar(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [selectedChat]);
+
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = 'hidden';
+
+    if (window.innerWidth <= 768) {
+      document.body.style.overflow = 'hidden';
+    }
+
     return () => {
       document.body.style.overflow = originalStyle;
     };
   }, []);
 
-  // Mobilde donanımsal geri tuşunu (Hardware Back Button) yakalama
   useEffect(() => {
     const handlePopState = () => {
       if (window.innerWidth <= 768 && selectedChat && !window.location.hash.includes('chat')) {
@@ -89,66 +166,22 @@ const Chat = () => {
         setShowSidebar(true);
       }
     };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [selectedChat, setSelectedChat]);
 
-  // ═══════════════════════════════════════════════════════
-  // 2. KULLANICI ARA (Yeni /api/users/search?q= endpoint)
-  // ═══════════════════════════════════════════════════════
-  const searchTimerRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      clearTimeout(searchTimerRef.current);
+      clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
-  const handleSearchUser = (e) => {
-    const q = e.target.value;
-    setSearchQuery(q);
-
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    // Debounce: 400ms bekle
-    clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(async () => {
-      try {
-        setIsSearching(true);
-        const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
-        setSearchResults(data.data.users || []);
-      } catch (error) {
-        console.error('Kullanıcı arama hatası:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 400);
-  };
-
-  // ═══════════════════════════════════════════════════════
-  // 3. SOHBETE ERİŞ (accessChat — Yeni veya Var Olan)
-  // ═══════════════════════════════════════════════════════
-  const accessChat = async (targetUserId) => {
-    try {
-      const { data } = await api.post('/chat/access', { userId: targetUserId });
-      const room = data.data.room;
-
-      if (!chats.find((c) => c._id === room._id)) {
-        setChats((prev) => [room, ...prev]);
-      }
-      handleSwitchRoom(room);
-      setSearchQuery('');
-      setSearchResults([]);
-    } catch (error) {
-      toast.error('Sohbete erişilemedi');
-    }
-  };
-
-  // ═══════════════════════════════════════════════════════
-  // 4. ODA DEĞİŞTİRME & MESAJLARI ÇEK
-  // ═══════════════════════════════════════════════════════
   const handleSwitchRoom = useCallback((roomObj) => {
+    if (!roomObj) return;
     if (selectedChat?._id === roomObj._id) return;
 
-    // Mobilde donanımsal geri tuşu çalışsın diye fake bir URL History (hash) bırakıyoruz
     if (window.innerWidth <= 768 && !window.location.hash.includes('chat')) {
       window.history.pushState(null, '', window.location.pathname + window.location.search + '#chat');
     }
@@ -159,27 +192,64 @@ const Chat = () => {
 
     setSelectedChat(roomObj);
     setMessages([]);
+    setMessagesError('');
 
     if (socket) {
       socket.emit('joinRoom', roomObj.name);
     }
+
     setShowSidebar(false);
+    fetchMessagesForRoom(roomObj);
+  }, [selectedChat, socket, setMessages, setSelectedChat, fetchMessagesForRoom]);
 
-    // Mesajları API'den çek
-    (async () => {
-      try {
-        const { data } = await api.get(`/chat/messages?room=${roomObj.name}&limit=50`);
-        setMessages(data.data.messages || []);
-      } catch (error) {
-        console.error('Mesajlar yüklenemedi', error);
+  useEffect(() => {
+    if (!socket || !selectedChat?.name) return;
+    socket.emit('joinRoom', selectedChat.name);
+  }, [socket, selectedChat?.name]);
+
+  const accessChat = async (targetUserId) => {
+    try {
+      const { data } = await api.post('/chat/access', { userId: targetUserId });
+      const room = data.data.room;
+
+      if (!chats.find((chatRoom) => chatRoom._id === room._id)) {
+        setChats((prev) => [room, ...prev]);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChat, socket, setMessages, setSelectedChat]);
 
-  // ═══════════════════════════════════════════════════════
-  // 5. SOCKET DİNLEYİCİLERİ
-  // ═══════════════════════════════════════════════════════
+      handleSwitchRoom(room);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Sohbete erisilemedi');
+    }
+  };
+
+  const handleSearchUser = (event) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      clearTimeout(searchTimerRef.current);
+      return;
+    }
+
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const { data } = await api.get(`/users/search?q=${encodeURIComponent(trimmed)}&limit=10`);
+        setSearchResults(data.data.users || []);
+      } catch (error) {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+  };
+
   useEffect(() => {
     if (!socket) return;
 
@@ -190,121 +260,164 @@ const Chat = () => {
     };
 
     const handleMessageEdited = ({ messageId, content, isEdited, editedAt }) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId ? { ...msg, content, isEdited, editedAt } : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => (
+        msg._id === messageId ? { ...msg, content, isEdited, editedAt } : msg
+      )));
     };
 
     const handleMessageDeleted = ({ messageId }) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId
-            ? { ...msg, isDeleted: true, content: 'Bu mesaj silindi' }
-            : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => (
+        msg._id === messageId
+          ? { ...msg, isDeleted: true, content: 'Bu mesaj silindi' }
+          : msg
+      )));
     };
 
     const handleUserTyping = ({ userId, name, isTyping }) => {
       if (userId === user._id) return;
+
       setTypingUsers((prev) => {
-        if (isTyping) return prev.includes(name) ? prev : [...prev, name];
-        return prev.filter((n) => n !== name);
+        if (isTyping) {
+          return prev.includes(name) ? prev : [...prev, name];
+        }
+        return prev.filter((typingName) => typingName !== name);
       });
+    };
+
+    const handleSocketError = (payload) => {
+      if (payload?.message) {
+        toast.error(payload.message);
+      }
     };
 
     socket.on('newMessage', handleNewMessage);
     socket.on('messageEdited', handleMessageEdited);
     socket.on('messageDeleted', handleMessageDeleted);
     socket.on('userTyping', handleUserTyping);
+    socket.on('error', handleSocketError);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
       socket.off('messageEdited', handleMessageEdited);
       socket.off('messageDeleted', handleMessageDeleted);
       socket.off('userTyping', handleUserTyping);
+      socket.off('error', handleSocketError);
     };
-  }, [socket, selectedChat, user._id, setMessages]);
+  }, [socket, selectedChat, user._id, setMessages, toast]);
 
-  // Yeni mesaj gelince en alta kaydır
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typingUsers]);
 
-  // ═══════════════════════════════════════════════════════
-  // 6. MESAJ GÖNDER
-  // ═══════════════════════════════════════════════════════
   const sendMessage = useCallback(() => {
-    if (!newMessage.trim() || !socket || !socketConnected || !selectedChat) return;
+    if (!selectedChat || !socket || !socketConnected || isUploading) return;
+
+    const content = newMessage.trim();
+    if (!content) return;
 
     socket.emit('sendMessage', {
-      content: newMessage.trim(),
+      content,
       room: selectedChat.name,
       type: 'text',
     });
+
     setNewMessage('');
-    inputRef.current?.focus();
-  }, [newMessage, socket, socketConnected, selectedChat]);
 
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    },
-    [sendMessage]
-  );
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.focus();
+    }
+  }, [newMessage, socket, socketConnected, selectedChat, isUploading]);
 
-  const handleInputChange = useCallback(
-    (e) => {
-      setNewMessage(e.target.value);
-      if (!socket || !selectedChat) return;
-      socket.emit('typing', { room: selectedChat.name, isTyping: true });
+  const handleKeyDown = useCallback((event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  }, [sendMessage]);
 
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        socket.emit('typing', { room: selectedChat.name, isTyping: false });
-      }, 1500);
-    },
-    [socket, selectedChat]
-  );
+  const handleInputChange = useCallback((event) => {
+    const value = event.target.value;
+    setNewMessage(value);
 
-  // ═══════════════════════════════════════════════════════
-  // 7. MESAJ DÜZENLE & SİL
-  // ═══════════════════════════════════════════════════════
+    event.target.style.height = 'auto';
+    event.target.style.height = `${Math.min(event.target.scrollHeight, 120)}px`;
+
+    if (!socket || !selectedChat) return;
+
+    socket.emit('typing', { room: selectedChat.name, isTyping: true });
+
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('typing', { room: selectedChat.name, isTyping: false });
+    }, 1200);
+  }, [socket, selectedChat]);
+
   const handleEditMessage = useCallback(() => {
-    if (!editingMsg || !editContent.trim()) return;
-    socket?.emit('editMessage', {
+    if (!editingMsg || !socket || !selectedChat) return;
+
+    const content = editContent.trim();
+    if (!content || content.length > MAX_MESSAGE_LENGTH) return;
+
+    socket.emit('editMessage', {
       messageId: editingMsg._id,
-      content: editContent.trim(),
-      room: selectedChat?.name,
+      content,
+      room: selectedChat.name,
     });
+
     setEditingMsg(null);
     setEditContent('');
   }, [editingMsg, editContent, socket, selectedChat]);
 
-  const handleDeleteMessage = useCallback(
-    (messageId) => {
-      socket?.emit('deleteMessage', { messageId, room: selectedChat?.name });
-    },
-    [socket, selectedChat]
-  );
+  const handleDeleteMessage = useCallback((messageId) => {
+    if (!socket || !selectedChat) return;
 
-  // ═══════════════════════════════════════════════════════
-  // 8. DOSYA YÜKLE
-  // ═══════════════════════════════════════════════════════
+    socket.emit('deleteMessage', {
+      messageId,
+      room: selectedChat.name,
+    });
+  }, [socket, selectedChat]);
+
+  const resetSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Dosya boyutu 10MB sinirini asamaz.');
+      event.target.value = '';
+      return;
+    }
+
+    const isImage = file.type.startsWith('image/');
+    if (!isImage && !allowedMimeTypes.has(file.type)) {
+      toast.error('Bu dosya tipi desteklenmiyor.');
+      event.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
   const handleFileUpload = async () => {
     if (!selectedFile || !socket || !socketConnected || !selectedChat) return;
+
     setIsUploading(true);
+
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+
       const res = await api.post('/chat/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       const fileData = res.data.data;
       const isImage = selectedFile.type.startsWith('image/');
 
@@ -315,35 +428,29 @@ const Chat = () => {
         fileData,
       });
 
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      toast.success('Dosya gönderildi!');
-    } catch (err) {
-      toast.error('Dosya yüklenemedi');
+      resetSelectedFile();
+      toast.success('Dosya gonderildi');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Dosya yuklenemedi');
     } finally {
       setIsUploading(false);
     }
   };
 
-  // ═══════════════════════════════════════════════════════
-  // YARDIMCILAR
-  // ═══════════════════════════════════════════════════════
-
-  // Karşı kullanıcının adını oda bilgisinden çıkar
   const getChatDisplayName = (roomObj) => {
     if (!roomObj) return '';
 
-    // Private oda ve members populate edilmişse
     if (roomObj.type === 'private' && roomObj.members && roomObj.members.length > 0) {
-      const otherMember = roomObj.members.find(
-        (m) => (m._id || m) !== user._id && (m._id?.toString?.() || m.toString()) !== user._id
-      );
-      if (otherMember && otherMember.name) return otherMember.name;
+      const otherMember = roomObj.members.find((member) => {
+        const memberId = (member._id || member).toString();
+        return memberId !== user._id;
+      });
+
+      if (otherMember?.name) return otherMember.name;
     }
 
-    // Private oda ama members bilgisi yoksa
     if (roomObj.name?.startsWith('private_')) {
-      return 'Özel Sohbet';
+      return 'Ozel Sohbet';
     }
 
     return roomObj.name || 'Oda';
@@ -351,14 +458,17 @@ const Chat = () => {
 
   const getChatAvatar = (roomObj) => {
     if (roomObj?.type === 'private' && roomObj.members) {
-      const otherMember = roomObj.members.find(
-        (m) => (m._id?.toString?.() || m.toString()) !== user._id
-      );
+      const otherMember = roomObj.members.find((member) => {
+        const memberId = (member._id?.toString?.() || member.toString());
+        return memberId !== user._id;
+      });
+
       if (otherMember?.avatar) return otherMember.avatar;
       if (otherMember?.name) {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(otherMember.name)}&background=f97316&color=fff&size=40`;
       }
     }
+
     return null;
   };
 
@@ -369,31 +479,24 @@ const Chat = () => {
 
   const isOwnMessage = (msg) => msg.sender?._id === user._id;
 
-  const formatTime = (date) =>
-    new Date(date).toLocaleTimeString('tr-TR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatTime = (date) => new Date(date).toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  // ═══════════════════════════════════════════════════════
-  //  RENDER
-  // ═══════════════════════════════════════════════════════
+  const canSendMessage = Boolean(newMessage.trim()) && socketConnected && !isUploading;
+
   return (
     <div className="chat-page">
-      {/* ────────── SOL PANEL ────────── */}
       <div className={`chat-sidebar ${showSidebar ? 'chat-sidebar-open' : ''}`}>
         <div className="sidebar-section">
           <div className="sidebar-header">
             <h3><MessageSquare size={20} className="nav-icon-inline" /> Mesajlar</h3>
-            <button
-              className="hidden-desktop btn-text"
-              onClick={() => setShowSidebar(false)}
-            >
+            <button className="hidden-desktop btn-text" onClick={() => setShowSidebar(false)} aria-label="Paneli kapat">
               <X size={20} />
             </button>
           </div>
 
-          {/* Kullanıcı Arama */}
           <div className="search-section" style={{ marginBottom: '12px' }}>
             <div className="search-input-wrapper">
               <Search size={16} className="search-icon" />
@@ -401,65 +504,83 @@ const Chat = () => {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchUser}
-                placeholder="Kişi ara..."
+                placeholder="Kisi ara..."
                 className="search-input"
+                aria-label="Kullanici ara"
               />
             </div>
+
             {searchQuery && (
               <div className="search-history" style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                {isSearching ? (
-                  <p style={{ fontSize: '12px', padding: '10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    Aranıyor...
-                  </p>
+                {searchQuery.trim().length < 2 ? (
+                  <p className="chat-info-message">Arama icin en az 2 karakter yazin</p>
+                ) : isSearching ? (
+                  <p className="chat-info-message">Araniyor...</p>
                 ) : searchResults.length > 0 ? (
-                  searchResults.map((usr) => (
+                  searchResults.map((searchUser) => (
                     <button
-                      key={usr._id}
+                      key={searchUser._id}
                       className="search-history-item"
-                      onClick={() => accessChat(usr._id)}
+                      onClick={() => accessChat(searchUser._id)}
                       style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
                     >
                       <img
-                        src={usr.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(usr.name)}&size=28&background=f97316&color=fff`}
-                        alt=""
+                        src={searchUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(searchUser.name)}&size=28&background=f97316&color=fff`}
+                        alt={searchUser.name}
+                        onError={(event) => {
+                          event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(searchUser.name)}&size=28&background=f97316&color=fff`;
+                        }}
                         style={{ width: 28, height: 28, borderRadius: '50%' }}
                       />
                       <div>
-                        <div style={{ fontWeight: 600 }}>{usr.name}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{usr.email}</div>
+                        <div style={{ fontWeight: 600 }}>{searchUser.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{searchUser.email}</div>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <p style={{ fontSize: '12px', padding: '10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    Kullanıcı bulunamadı
-                  </p>
+                  <p className="chat-info-message">Kullanici bulunamadi</p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Sohbet Listesi */}
           <div className="room-list">
-            {chats.length > 0 ? (
-              chats.map((c) => {
-                const avatar = getChatAvatar(c);
+            {isLoadingChats ? (
+              <p className="chat-info-message">Sohbet listesi yukleniyor...</p>
+            ) : chatsError ? (
+              <div className="chat-inline-error">
+                <p>{chatsError}</p>
+                <button onClick={fetchChats} className="btn btn-ghost btn-sm">Tekrar dene</button>
+              </div>
+            ) : chats.length > 0 ? (
+              chats.map((chatRoom) => {
+                const avatar = getChatAvatar(chatRoom);
+
                 return (
                   <button
-                    key={c._id}
-                    className={`room-item ${selectedChat?._id === c._id ? 'active' : ''}`}
-                    onClick={() => handleSwitchRoom(c)}
+                    key={chatRoom._id}
+                    className={`room-item ${selectedChat?._id === chatRoom._id ? 'active' : ''}`}
+                    onClick={() => handleSwitchRoom(chatRoom)}
                   >
                     {avatar ? (
-                      <img src={avatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                      <img
+                        src={avatar}
+                        alt={getChatDisplayName(chatRoom)}
+                        onError={(event) => {
+                          event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getChatDisplayName(chatRoom))}&size=36&background=f97316&color=fff`;
+                        }}
+                        style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+                      />
                     ) : (
-                      <span className="room-icon">{getChatIcon(c)}</span>
+                      <span className="room-icon">{getChatIcon(chatRoom)}</span>
                     )}
+
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span className="room-name">{getChatDisplayName(c)}</span>
-                      {c.description && c.type !== 'private' && (
+                      <span className="room-name">{getChatDisplayName(chatRoom)}</span>
+                      {chatRoom.description && chatRoom.type !== 'private' && (
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {c.description}
+                          {chatRoom.description}
                         </div>
                       )}
                     </div>
@@ -467,56 +588,55 @@ const Chat = () => {
                 );
               })
             ) : (
-              <p style={{ fontSize: '12px', textAlign: 'center', marginTop: '20px', color: 'var(--text-secondary)' }}>
-                Henüz sohbet yok. Yukarıdan kişi arayarak başlayın!
-              </p>
+              <p className="chat-info-message">Henuz sohbet yok. Yukaridan kisi arayarak baslayin.</p>
             )}
           </div>
         </div>
 
-        {/* Online Kullanıcılar */}
         <div className="sidebar-section">
           <div className="sidebar-header">
-            <h3>🟢 Online</h3>
+            <h3>Online</h3>
             <span className="online-count">{onlineUsers.length}</span>
           </div>
+
           <div className="online-list">
             {onlineUsers.length > 0 ? (
-              onlineUsers.map((u) => (
+              onlineUsers.map((onlineUser) => (
                 <div
-                  key={u.userId}
+                  key={onlineUser.userId}
                   className="online-user"
                   style={{ cursor: 'pointer' }}
-                  onClick={() => accessChat(u.userId)}
+                  onClick={() => accessChat(onlineUser.userId)}
                 >
                   <div className="online-dot" />
                   <img
-                    src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&size=28&background=128C7E&color=fff`}
-                    alt={u.name}
+                    src={onlineUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(onlineUser.name)}&size=28&background=128C7E&color=fff`}
+                    alt={onlineUser.name}
                     className="user-avatar-xs"
+                    onError={(event) => {
+                      event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(onlineUser.name)}&size=28&background=128C7E&color=fff`;
+                    }}
                   />
-                  <span>{u.name}</span>
+                  <span>{onlineUser.name}</span>
                 </div>
               ))
             ) : (
-              <p className="text-muted text-sm">Çevrimiçi kimse yok</p>
+              <p className="text-muted text-sm">Cevrimici kimse yok</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* ────────── SAĞ PANEL: CHAT ALANI ────────── */}
       <div className="chat-main">
         {selectedChat ? (
           <>
-            {/* HEADER */}
             <div className="chat-header">
               <div className="chat-room-info">
                 <button
                   className="hidden-desktop"
                   onClick={() => {
                     if (window.location.hash.includes('chat')) {
-                      window.history.back(); // Tetiklendiğinde popstate çalışır ve kapatır
+                      window.history.back();
                     } else {
                       setSelectedChat(null);
                       setShowSidebar(true);
@@ -534,49 +654,57 @@ const Chat = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    boxShadow: 'var(--shadow-sm)'
                   }}
-                  title="Sohbet Listesine Dön"
+                  title="Sohbet listesine don"
+                  aria-label="Sohbet listesine don"
                 >
                   <ArrowLeft size={20} />
                 </button>
+
                 {getChatAvatar(selectedChat) ? (
                   <img
                     src={getChatAvatar(selectedChat)}
-                    alt=""
+                    alt={getChatDisplayName(selectedChat)}
                     style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                   />
                 ) : (
                   <span className="room-icon">{getChatIcon(selectedChat)}</span>
                 )}
+
                 <div>
                   <span className="room-name" style={{ fontWeight: 700 }}>
                     {getChatDisplayName(selectedChat)}
                   </span>
                   {selectedChat.description && selectedChat.type !== 'private' && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      {selectedChat.description}
-                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{selectedChat.description}</div>
                   )}
                 </div>
               </div>
+
               <div className={`connection-status ${socketConnected ? 'connected' : 'disconnected'}`}>
                 <span className="status-dot" />
-                {socketConnected ? 'Bağlı' : 'Bağlanıyor..'}
+                {socketConnected ? 'Bagli' : 'Baglaniyor...'}
               </div>
             </div>
 
-            {/* MESAJLAR */}
             <div className="messages-container">
-              {messages.length === 0 ? (
+              {isLoadingMessages ? (
+                <div className="messages-loading">Mesajlar yukleniyor...</div>
+              ) : messagesError ? (
+                <div className="chat-inline-error">
+                  <p>{messagesError}</p>
+                  <button onClick={() => fetchMessagesForRoom(selectedChat)} className="btn btn-ghost btn-sm">Tekrar dene</button>
+                </div>
+              ) : messages.length === 0 ? (
                 <EmptyState
                   icon={MessageSquare}
                   title="Mesaj Yok"
-                  description="Henüz mesaj yok. İlk mesajı siz gönderin!"
+                  description="Henuz mesaj yok. Ilk mesaji siz gonderin."
                 />
               ) : (
                 messages.map((msg) => {
                   const isOwn = isOwnMessage(msg);
+
                   return (
                     <div
                       key={msg._id}
@@ -584,18 +712,15 @@ const Chat = () => {
                     >
                       {!isOwn && (
                         <img
-                          src={
-                            msg.sender?.avatar ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || '?')}&size=32&background=a78bfa&color=fff`
-                          }
-                          alt=""
+                          src={msg.sender?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || '?')}&size=32&background=a78bfa&color=fff`}
+                          alt={msg.sender?.name || 'Kullanici'}
                           className="message-avatar"
                         />
                       )}
 
                       <div
                         className="message-bubble"
-                        onClick={() => isOwn && setActiveMessageId(prev => prev === msg._id ? null : msg._id)}
+                        onClick={() => isOwn && setActiveMessageId((prev) => (prev === msg._id ? null : msg._id))}
                       >
                         {!isOwn && (
                           <div className="message-sender">
@@ -603,29 +728,42 @@ const Chat = () => {
                           </div>
                         )}
 
-                        {/* Düzenleme modu */}
                         {editingMsg?._id === msg._id ? (
                           <div className="message-edit-form">
                             <input
                               type="text"
                               value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleEditMessage();
-                                if (e.key === 'Escape') { setEditingMsg(null); setEditContent(''); }
+                              onChange={(event) => setEditContent(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') handleEditMessage();
+                                if (event.key === 'Escape') {
+                                  setEditingMsg(null);
+                                  setEditContent('');
+                                }
                               }}
                               autoFocus
+                              maxLength={MAX_MESSAGE_LENGTH}
                             />
                             <div className="message-edit-actions">
-                              <button onClick={handleEditMessage} className="btn-text"><Check size={16} /></button>
-                              <button onClick={() => { setEditingMsg(null); setEditContent(''); }} className="btn-text"><X size={16} /></button>
+                              <button onClick={handleEditMessage} className="btn-text" aria-label="Kaydet">
+                                <Check size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingMsg(null);
+                                  setEditContent('');
+                                }}
+                                className="btn-text"
+                                aria-label="Iptal"
+                              >
+                                <X size={16} />
+                              </button>
                             </div>
                           </div>
                         ) : (
                           <>
-                            {/* Dosya/resim */}
                             {msg.type === 'image' && msg.fileUrl && !msg.isDeleted ? (
-                              <img src={msg.fileUrl} alt="" className="message-image" />
+                              <img src={msg.fileUrl} alt={msg.fileName || 'Gorsel'} className="message-image" />
                             ) : msg.type === 'file' && msg.fileUrl && !msg.isDeleted ? (
                               <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="message-file">
                                 <Paperclip size={16} /> {msg.fileName}
@@ -638,31 +776,40 @@ const Chat = () => {
 
                         <div className="message-meta">
                           <span className="message-time">{formatTime(msg.createdAt)}</span>
-                          {msg.isEdited && <span className="message-edited">(düzenlendi)</span>}
+                          {msg.isEdited && <span className="message-edited">(duzenlendi)</span>}
                         </div>
 
-                        {/* Mesaj aksiyonları */}
                         {!msg.isDeleted && isOwn && !editingMsg && (
                           <div className={`message-actions ${activeMessageId === msg._id ? 'active' : ''}`}>
                             <button
-                              onClick={() => { setEditingMsg(msg); setEditContent(msg.content); }}
+                              onClick={() => {
+                                setEditingMsg(msg);
+                                setEditContent(msg.content);
+                              }}
                               className="message-action-btn"
-                              title="Düzenle"
-                            ><Edit2 size={14} /></button>
+                              title="Duzenle"
+                            >
+                              <Edit2 size={14} />
+                            </button>
                             <button
                               onClick={() => handleDeleteMessage(msg._id)}
                               className="message-action-btn"
                               title="Sil"
-                            ><Trash2 size={14} /></button>
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         )}
+
                         {!msg.isDeleted && !isOwn && ['admin', 'moderator'].includes(user.role) && (
                           <div className="message-actions">
                             <button
                               onClick={() => handleDeleteMessage(msg._id)}
                               className="message-action-btn"
-                              title="Sil (Moderatör)"
-                            ><Trash2 size={14} /></button>
+                              title="Sil"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         )}
                       </div>
@@ -676,83 +823,81 @@ const Chat = () => {
                   <div className="typing-dots">
                     <span /><span /><span />
                   </div>
-                  <span className="typing-text">
-                    {typingUsers.join(', ')} yazıyor...
-                  </span>
+                  <span className="typing-text">{typingUsers.join(', ')} yaziyor...</span>
                 </div>
               )}
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* DOSYA ÖNİZLEME */}
             {selectedFile && (
               <div className="file-preview">
                 <span className="file-preview-name"><Paperclip size={14} /> {selectedFile.name}</span>
                 <span className="file-preview-size">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                <button onClick={resetSelectedFile} className="file-preview-remove" aria-label="Dosyayi kaldir">
+                  <X size={14} />
+                </button>
                 <button
-                  onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="file-preview-remove"
-                ><X size={14} /></button>
-                <button onClick={handleFileUpload} disabled={isUploading} className="send-btn" style={{ width: 'auto', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem' }}>
-                  {isUploading ? 'Yükleniyor...' : 'Gönder'}
+                  onClick={handleFileUpload}
+                  disabled={isUploading}
+                  className="send-btn"
+                  style={{ width: 'auto', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem' }}
+                >
+                  {isUploading ? 'Yukleniyor...' : 'Gonder'}
                 </button>
               </div>
             )}
 
-            {/* INPUT ALANI */}
             <div className="chat-input-area">
               <div className="chat-input-wrapper">
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  onChange={handleFileSelect}
                   style={{ display: 'none' }}
                   accept="image/*,application/pdf,.doc,.docx,.txt,.zip,.rar"
                 />
+
                 <button
                   className="chat-file-btn"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Dosya gönder"
-                  disabled={!socketConnected}
+                  title="Dosya gonder"
+                  disabled={!socketConnected || isUploading}
                 >
                   <Paperclip size={20} />
                 </button>
+
                 <textarea
                   ref={inputRef}
                   value={newMessage}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Bir mesaj yazın..."
+                  placeholder="Bir mesaj yazin..."
                   className="chat-input"
                   rows={1}
-                  maxLength={1000}
+                  maxLength={MAX_MESSAGE_LENGTH}
                   disabled={!socketConnected}
                 />
+
                 <div className="input-actions">
-                  <span className="char-count">{newMessage.length}/1000</span>
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || !socketConnected}
-                    className="send-btn"
-                  >
+                  <span className="char-count">{newMessage.length}/{MAX_MESSAGE_LENGTH}</span>
+                  <button onClick={sendMessage} disabled={!canSendMessage} className="send-btn" aria-label="Mesaji gonder">
                     <Send size={18} />
                   </button>
                 </div>
               </div>
-              <p className="chat-hint">
-                Enter ile gönder • Shift+Enter ile yeni satır • 📎 ile dosya paylaş
-              </p>
+
+              <p className="chat-hint">Enter ile gonder • Shift+Enter ile yeni satir • Dosya limiti: 10MB</p>
             </div>
           </>
         ) : (
-          /* Sohbet seçilmemiş */
           <div className="empty-chat" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <EmptyState
               icon={MessageSquare}
               title="Sohbet"
-              description="Sol panelden bir kişi arayarak veya mevcut bir sohbete tıklayarak mesajlaşmaya başlayın."
+              description="Sol panelden bir kisi arayarak veya mevcut bir sohbete tiklayarak mesajlasmaya baslayin."
             />
+
             <button
               className="hidden-desktop"
               onClick={() => setShowSidebar(true)}
@@ -767,7 +912,7 @@ const Chat = () => {
                 fontSize: '0.9rem',
               }}
             >
-              ☰ Sohbetleri Göster
+              Sohbetleri Goster
             </button>
           </div>
         )}
@@ -777,3 +922,6 @@ const Chat = () => {
 };
 
 export default Chat;
+
+
+

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -14,7 +14,6 @@ const dotenv = require('dotenv');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 
-// ─── Environment variables ────────────────────────────────────────
 dotenv.config();
 
 const connectDB = require('./config/db');
@@ -24,26 +23,17 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { saveMessage } = require('./controllers/chatController');
 const logger = require('./utils/logger');
 
-// ─── Uygulama ve HTTP sunucusu ────────────────────────────────────
 const app = express();
 const httpServer = http.createServer(app);
 
-// ─── Socket.io başlat ─────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CLIENT_URL || 'https://mernapp-ecru.vercel.app',
     credentials: true,
   },
-  maxHttpBufferSize: 10 * 1024 * 1024, // 10MB (dosya paylaşımı için)
+  maxHttpBufferSize: 10 * 1024 * 1024,
 });
 
-// ─── Veritabanı bağlantısı ────────────────────────────────────────
-connectDB();
-
-// ─── Redis bağlantısı ─────────────────────────────────────────────
-connectRedis();
-
-// ─── GÜVENLİK MİDDLEWARE'LERİ ───────────────────────────────────
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -57,11 +47,10 @@ app.use(cors({
   exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
 }));
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
-  message: { success: false, message: 'Çok fazla istek gönderildi. 15 dakika sonra tekrar deneyin.' },
+  message: { success: false, message: 'Cok fazla istek gonderildi. 15 dakika sonra tekrar deneyin.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -70,92 +59,101 @@ app.use('/api', limiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { success: false, message: 'Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.' },
+  message: { success: false, message: 'Cok fazla giris denemesi. 15 dakika sonra tekrar deneyin.' },
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// ─── GENEL MİDDLEWARE'LER ────────────────────────────────────────
-app.use(express.json({ limit: '10mb' })); // Dosya upload'ları için artırıldı
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
-app.use(xss()); // XSS Koruması
+app.use(xss());
 app.use(compression());
 
-// Loglama — Winston + Morgan
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev', { stream: logger.stream }));
 } else {
   app.use(morgan('combined', { stream: logger.stream }));
 }
 
-// ─── Static dosyalar (uploads) ────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── SWAGGER API Dokümantasyonu ───────────────────────────────────
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'MERN App API Docs',
 }));
 
-// ─── ROUTES ───────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/notifications', require('./routes/notifications'));
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'API çalışıyor',
+    message: 'API calisiyor',
     timestamp: new Date().toISOString(),
     dbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    version: '2.0.0',
+    version: '2.1.0',
   });
 });
 
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route bulunamadı: ${req.method} ${req.originalUrl}`,
+    message: `Route bulunamadi: ${req.method} ${req.originalUrl}`,
   });
 });
 
-// ─── GLOBAL ERROR HANDLER ────────────────────────────────────────
 app.use(errorHandler);
 
-// ─── SOCKET.IO — GERÇEK ZAMANLI CHAT ─────────────────────────────
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
+const Room = require('./models/Room');
 const Message = require('./models/Message');
 const Notification = require('./models/Notification');
+const { isValidObjectId } = require('./utils/validators');
 
-// Online kullanıcıları takip et
 const onlineUsers = new Map();
+
+const canAccessRoom = async (roomName, userId) => {
+  const room = await Room.findOne({ name: roomName }).select('type members').lean();
+
+  if (!room) {
+    if (roomName.startsWith('private_')) {
+      return false;
+    }
+    return true;
+  }
+
+  if (room.type !== 'private') {
+    return true;
+  }
+
+  return room.members.some((memberId) => memberId.toString() === userId.toString());
+};
 
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth.token;
-    if (!token) return next(new Error('Token bulunamadı'));
+    if (!token) return next(new Error('Token bulunamadi'));
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
     const user = await User.findById(decoded.userId);
-    if (!user) return next(new Error('Kullanıcı bulunamadı'));
+    if (!user || !user.isActive) return next(new Error('Kullanici bulunamadi'));
 
     socket.user = user;
     next();
   } catch (err) {
-    next(new Error('Kimlik doğrulama başarısız'));
+    next(new Error('Kimlik dogrulama basarisiz'));
   }
 });
 
 io.on('connection', (socket) => {
   const user = socket.user;
-  logger.info(`🟢 Kullanıcı bağlandı: ${user.name} (${socket.id})`);
+  logger.info(`Kullanici baglandi: ${user.name} (${socket.id})`);
 
-  // Online kullanıcı listesine ekle
   const avatarUrl = (user.avatar && !user.avatar.startsWith('http'))
     ? `${process.env.BACKEND_URL || ''}${user.avatar}`
     : user.avatar;
@@ -167,39 +165,55 @@ io.on('connection', (socket) => {
     role: user.role,
   });
 
-  // Tüm kullanıcılara online listesini gönder
   io.emit('onlineUsers', Array.from(onlineUsers.entries()).map(([id, data]) => ({
     userId: id,
     ...data,
   })));
 
-  // ─── Odaya katıl ──────────────────────────────────────────────
-  socket.on('joinRoom', (room) => {
-    socket.join(room);
-    logger.debug(`${user.name} → ${room} odasına katıldı`);
+  socket.on('joinRoom', async (room) => {
+    try {
+      const roomName = String(room || '').trim();
+      if (!roomName) return;
+
+      const allowed = await canAccessRoom(roomName, user._id);
+      if (!allowed) {
+        socket.emit('error', { message: 'Bu odaya erisim yetkiniz yok' });
+        return;
+      }
+
+      socket.join(roomName);
+      logger.debug(`${user.name} -> ${roomName} odasina katildi`);
+    } catch (err) {
+      logger.warn('joinRoom kontrol hatasi:', err.message);
+    }
   });
 
-  // ─── Odadan ayrıl ─────────────────────────────────────────────
   socket.on('leaveRoom', (room) => {
-    socket.leave(room);
-    logger.debug(`${user.name} → ${room} odasından ayrıldı`);
+    const roomName = String(room || '').trim();
+    if (!roomName) return;
+
+    socket.leave(roomName);
+    logger.debug(`${user.name} -> ${roomName} odasindan ayrildi`);
   });
 
-  // ─── Mesaj gönder ─────────────────────────────────────────────
   socket.on('sendMessage', async ({ content, room = 'general', type = 'text', fileData = null }) => {
     try {
-      if (type === 'text' && (!content || content.trim().length === 0)) return;
-      if (type === 'text' && content.length > 1000) return;
+      const roomName = String(room || 'general').trim() || 'general';
+
+      if (type === 'text') {
+        const normalized = String(content || '').trim();
+        if (!normalized || normalized.length > 1000) return;
+      }
 
       const message = await saveMessage(
-        type === 'text' ? content.trim() : (content || fileData?.fileName || 'Dosya'),
+        type === 'text' ? String(content || '').trim() : (content || fileData?.fileName || 'Dosya'),
         user._id,
-        room,
+        roomName,
         type,
         fileData
       );
 
-      io.to(room).emit('newMessage', {
+      io.to(roomName).emit('newMessage', {
         _id: message._id,
         content: message.content,
         sender: {
@@ -208,7 +222,7 @@ io.on('connection', (socket) => {
           avatar: avatarUrl,
           role: user.role,
         },
-        room,
+        room: roomName,
         type: message.type,
         fileUrl: message.fileUrl,
         fileName: message.fileName,
@@ -219,36 +233,45 @@ io.on('connection', (socket) => {
         createdAt: message.createdAt,
       });
     } catch (err) {
-      logger.error('Mesaj gönderme hatası:', err);
-      socket.emit('error', { message: 'Mesaj gönderilemedi' });
+      logger.error('Mesaj gonderme hatasi:', err);
+      socket.emit('error', { message: err.message || 'Mesaj gonderilemedi' });
     }
   });
 
-  // ─── Mesaj düzenle ────────────────────────────────────────────
   socket.on('editMessage', async ({ messageId, content, room }) => {
     try {
-      const message = await Message.findById(messageId);
-      if (!message || message.sender.toString() !== user._id.toString()) return;
+      if (!isValidObjectId(messageId)) return;
 
-      message.content = content.trim();
+      const normalizedContent = String(content || '').trim();
+      if (!normalizedContent || normalizedContent.length > 1000) return;
+
+      const message = await Message.findById(messageId);
+      if (!message || message.isDeleted) return;
+      if (message.sender.toString() !== user._id.toString()) return;
+
+      message.content = normalizedContent;
       message.isEdited = true;
       message.editedAt = new Date();
       await message.save();
 
-      io.to(room).emit('messageEdited', {
+      const roomName = String(room || message.room || '').trim();
+      if (!roomName) return;
+
+      io.to(roomName).emit('messageEdited', {
         messageId,
         content: message.content,
         isEdited: true,
         editedAt: message.editedAt,
       });
     } catch (err) {
-      logger.error('Mesaj düzenleme hatası:', err);
+      logger.error('Mesaj duzenleme hatasi:', err);
     }
   });
 
-  // ─── Mesaj sil ────────────────────────────────────────────────
   socket.on('deleteMessage', async ({ messageId, room }) => {
     try {
+      if (!isValidObjectId(messageId)) return;
+
       const message = await Message.findById(messageId);
       if (!message) return;
 
@@ -256,29 +279,45 @@ io.on('connection', (socket) => {
       const isAdmin = ['admin', 'moderator'].includes(user.role);
       if (!isOwner && !isAdmin) return;
 
-      message.isDeleted = true;
-      message.deletedAt = new Date();
-      message.content = 'Bu mesaj silindi';
-      await message.save();
+      if (!message.isDeleted) {
+        message.isDeleted = true;
+        message.deletedAt = new Date();
+        message.content = 'Bu mesaj silindi';
+        await message.save();
+      }
 
-      io.to(room).emit('messageDeleted', { messageId });
+      const roomName = String(room || message.room || '').trim();
+      if (!roomName) return;
+
+      io.to(roomName).emit('messageDeleted', { messageId });
     } catch (err) {
-      logger.error('Mesaj silme hatası:', err);
+      logger.error('Mesaj silme hatasi:', err);
     }
   });
 
-  // ─── Yazıyor bildirimi ────────────────────────────────────────
-  socket.on('typing', ({ room, isTyping }) => {
-    socket.to(room).emit('userTyping', {
-      userId: user._id,
-      name: user.name,
-      isTyping,
-    });
+  socket.on('typing', async ({ room, isTyping }) => {
+    try {
+      const roomName = String(room || '').trim();
+      if (!roomName) return;
+
+      const allowed = await canAccessRoom(roomName, user._id);
+      if (!allowed) return;
+
+      socket.to(roomName).emit('userTyping', {
+        userId: user._id,
+        name: user.name,
+        isTyping: Boolean(isTyping),
+      });
+    } catch {
+      // Ignore typing errors
+    }
   });
 
-  // ─── Bildirim gönder (real-time) ──────────────────────────────
   socket.on('sendNotification', async ({ targetUserId, type, title, message: msg }) => {
     try {
+      if (!isValidObjectId(targetUserId)) return;
+      if (!title || !msg) return;
+
       const notification = await Notification.create({
         userId: targetUserId,
         type,
@@ -286,20 +325,18 @@ io.on('connection', (socket) => {
         message: msg,
       });
 
-      // Hedef kullanıcı online ise anlık bildirim gönder
       const targetSocket = onlineUsers.get(targetUserId);
       if (targetSocket) {
         io.to(targetSocket.socketId).emit('newNotification', notification);
       }
     } catch (err) {
-      logger.error('Bildirim gönderme hatası:', err);
+      logger.error('Bildirim gonderme hatasi:', err);
     }
   });
 
-  // ─── Bağlantı koptu ───────────────────────────────────────────
   socket.on('disconnect', () => {
     onlineUsers.delete(user._id.toString());
-    logger.info(`🔴 Kullanıcı ayrıldı: ${user.name}`);
+    logger.info(`Kullanici ayrildi: ${user.name}`);
 
     io.emit('onlineUsers', Array.from(onlineUsers.entries()).map(([id, data]) => ({
       userId: id,
@@ -308,28 +345,28 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── SUNUCUYU BAŞLAT ──────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  logger.info(`
-  ╔════════════════════════════════════════╗
-  ║   🚀 MERN Backend v2.0 Başladı!       ║
-  ║   Port: ${PORT}                           ║
-  ║   Ortam: ${(process.env.NODE_ENV || 'development').padEnd(17)}    ║
-  ║   API Docs: http://localhost:${PORT}/api-docs ║
-  ╚════════════════════════════════════════╝
-  `);
-});
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+  connectRedis();
 
-// ─── Beklenmedik hatalar ──────────────────────────────────────────
+  const PORT = process.env.PORT || 5000;
+  httpServer.listen(PORT, () => {
+    logger.info(`MERN Backend v2.1 basladi. Port: ${PORT}, Ortam: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
 process.on('unhandledRejection', (err) => {
-  logger.error('❌ Unhandled Promise Rejection:', err);
+  logger.error('Unhandled Promise Rejection:', err);
   httpServer.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
-  logger.error('❌ Uncaught Exception:', err);
+  logger.error('Uncaught Exception:', err);
   process.exit(1);
 });
 
 module.exports = { app, io };
+
+
+
+
