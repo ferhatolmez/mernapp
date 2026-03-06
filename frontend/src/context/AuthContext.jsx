@@ -41,7 +41,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const response = await api.get('/auth/me');
+        // Login ekraninin gec gelmesini engellemek icin kisa auth timeout.
+        const response = await api.get('/auth/me', { timeout: 3000 });
         dispatch({ type: 'AUTH_SUCCESS', payload: { user: response.data.data.user } });
       } catch (error) {
         localStorage.removeItem('accessToken');
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: false });
       return { success: true, message: response.data.message };
     } catch (error) {
-      const message = error.response?.data?.message || 'Kayıt başarısız';
+      const message = error.response?.data?.message || 'Kayit basarisiz';
       dispatch({ type: 'AUTH_FAIL', payload: message });
       return { success: false, message };
     }
@@ -70,7 +71,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/login', { email, password, twoFactorCode });
 
-      // 2FA gerekiyorsa
       if (response.data.requiresTwoFactor) {
         dispatch({ type: 'SET_LOADING', payload: false });
         return { success: false, requiresTwoFactor: true };
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Giriş başarısız';
+      const message = error.response?.data?.message || 'Giris basarisiz';
       dispatch({ type: 'AUTH_FAIL', payload: message });
       return { success: false, message };
     }
@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth, AuthProvider içinde kullanılmalıdır');
+    throw new Error('useAuth, AuthProvider icinde kullanilmalidir');
   }
   return context;
 };

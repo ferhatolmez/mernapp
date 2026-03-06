@@ -1,20 +1,18 @@
 import axios from 'axios';
 
-// ─── Rate limit state (global) ────────────────────────────────────
 let rateLimitInfo = { remaining: null, limit: null, reset: null };
 
 export const getRateLimitInfo = () => rateLimitInfo;
 
-// ─── Axios instance ───────────────────────────────────────────────
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'https://mernapp-1ygk.onrender.com/api',
   withCredentials: true,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ─── Request Interceptor — Her isteğe access token ekle ──────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
@@ -26,7 +24,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor — Token expire + Rate limit ────────────
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -43,17 +40,18 @@ const processQueue = (error, token = null) => {
 
 api.interceptors.response.use(
   (response) => {
-    // Rate limit bilgilerini güncelle
     const remaining = response.headers['x-ratelimit-remaining'];
     const limit = response.headers['x-ratelimit-limit'];
     const reset = response.headers['x-ratelimit-reset'];
+
     if (remaining !== undefined) {
       rateLimitInfo = {
-        remaining: parseInt(remaining),
-        limit: parseInt(limit),
-        reset: reset ? new Date(parseInt(reset) * 1000) : null,
+        remaining: parseInt(remaining, 10),
+        limit: parseInt(limit, 10),
+        reset: reset ? new Date(parseInt(reset, 10) * 1000) : null,
       };
     }
+
     return response;
   },
   async (error) => {

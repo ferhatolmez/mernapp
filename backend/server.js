@@ -345,14 +345,23 @@ io.on('connection', (socket) => {
   });
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  connectDB();
-  connectRedis();
+const startServer = async () => {
+  try {
+    await connectDB();
+    connectRedis();
 
-  const PORT = process.env.PORT || 5000;
-  httpServer.listen(PORT, () => {
-    logger.info(`MERN Backend v2.1 basladi. Port: ${PORT}, Ortam: ${process.env.NODE_ENV || 'development'}`);
-  });
+    const PORT = process.env.PORT || 5000;
+    httpServer.listen(PORT, () => {
+      logger.info(`MERN Backend v2.1 basladi. Port: ${PORT}, Ortam: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    logger.error('Sunucu baslatma hatasi:', error);
+    process.exit(1);
+  }
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
 }
 
 process.on('unhandledRejection', (err) => {
